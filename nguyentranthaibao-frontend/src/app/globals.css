@@ -1,0 +1,81 @@
+@import "tailwindcss";
+
+:root {
+  --background: #ffffff;
+  --foreground: #171717;
+  /* Thêm biến màu cho Admin Sidebar */
+  --sidebar-bg: #0f172a;
+  --sidebar-item-hover: rgba(255, 255, 255, 0.08);
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #0a0a0a;
+    --foreground: #ededed;
+  }
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+/* --- CUSTOM CSS CHO ADMIN INTERFACE --- */
+
+/* 1. Tùy chỉnh thanh cuộn (Scrollbar) siêu mảnh cho Sidebar */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 4px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #1e293b; /* Màu Slate-800 */
+  border-radius: 10px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* 2. Tinh chỉnh Menu Ant Design để đẹp hơn */
+/* Làm cho menu con (Submenu) có chiều sâu */
+.ant-menu-sub.ant-menu-inline {
+  background: rgba(0, 0, 0, 0.2) !important;
+  margin: 4px 12px !important;
+  border-radius: 8px;
+  padding: 4px 0;
+}
+
+/* Hiệu ứng khi hover vào item menu */
+.ant-menu-dark .ant-menu-item:hover, 
+.ant-menu-dark .ant-menu-submenu-title:hover {
+  background-color: var(--sidebar-item-hover) !important;
+}
+
+/* Tinh chỉnh khoảng cách icon và chữ */
+.ant-menu-item .anticon, 
+.ant-menu-submenu-title .anticon {
+  font-size: 18px !important;
+  transition: transform 0.2s ease;
+}
+
+.ant-menu-item:active .anticon {
+  transform: scale(0.9);
+}
+
+/* 3. Loại bỏ viền mặc định của Ant Design Sider */
+.ant-layout-sider-children {
+  display: flex;
+  flex-direction: column;
+}
+
+.ant-menu-dark.ant-menu-inline-collapsed {
+  width: 100%;
+}
