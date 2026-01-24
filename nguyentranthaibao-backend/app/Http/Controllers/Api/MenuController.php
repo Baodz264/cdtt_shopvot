@@ -16,42 +16,77 @@ class MenuController extends Controller
     {
         $query = Menu::query();
 
-        // Filter theo status
-        if ($request->filled('status')) {
-            $query->where('status', $request->status);
-        }
+        /* ================= SEARCH ================= */
 
-        // Search theo name hoặc link
         if ($request->filled('search')) {
             $search = $request->search;
             $query->where(function ($q) use ($search) {
                 $q->where('name', 'like', "%$search%")
-                  ->orWhere('link', 'like', "%$search%");
+                    ->orWhere('link', 'like', "%$search%");
             });
         }
 
-        // Clone query để tính total trước khi phân trang
-        $totalQuery = clone $query;
-        $total = $totalQuery->count();
+        /* ================= FILTER ================= */
 
-        // Phân trang
+        // Filter status
+        if ($request->filled('status')) {
+            $query->where('status', $request->status);
+        }
+
+        // Filter type
+        if ($request->filled('type')) {
+            $query->where('type', $request->type);
+        }
+
+        // Filter position
+        if ($request->filled('position')) {
+            $query->where('position', $request->position);
+        }
+
+        // Filter parent_id
+        if ($request->filled('parent_id')) {
+            $query->where('parent_id', $request->parent_id);
+        }
+
+        // Filter theo ngày tạo
+        if ($request->filled('from_date')) {
+            $query->whereDate('created_at', '>=', $request->from_date);
+        }
+
+        if ($request->filled('to_date')) {
+            $query->whereDate('created_at', '<=', $request->to_date);
+        }
+
+        /* ================= SORT ================= */
+
+        $sortBy = $request->get('sort_by', 'id');        // id | name | created_at
+        $sortOrder = $request->get('sort_order', 'desc'); // asc | desc
+
+        $query->orderBy($sortBy, $sortOrder);
+
+        /* ================= PAGINATION ================= */
+
         $limit = (int) $request->get('limit', 10);
-        $page  = (int) $request->get('page', 1);
-        $menus = $query->orderBy('id', 'desc')
-                       ->skip(($page - 1) * $limit)
-                       ->take($limit)
-                       ->get();
+        $page = (int) $request->get('page', 1);
+
+        $total = $query->count();
+
+        $menus = $query
+            ->skip(($page - 1) * $limit)
+            ->take($limit)
+            ->get();
 
         return response()->json([
             'status' => true,
             'data' => $menus,
             'total' => $total,
             'limit' => $limit,
-            'page'  => $page,
+            'page' => $page,
             'totalPage' => ceil($total / $limit),
             'message' => 'Tải dữ liệu menu thành công'
         ], 200);
     }
+
 
     /**
      * Chi tiết menu
@@ -78,25 +113,25 @@ class MenuController extends Controller
     public function store(Request $request)
     {
         $validator = Validator::make($request->all(), [
-            'name'      => 'required|string|max:150',
-            'link'      => 'nullable|string',
-            'type'      => 'required|in:category,topic,post,custom',
+            'name' => 'required|string|max:150',
+            'link' => 'nullable|string',
+            'type' => 'required|in:category,topic,post,custom',
             'parent_id' => 'nullable|integer|exists:menu,id',
-            'position'  => 'required|string|max:50',
-            'status'    => 'nullable|integer|in:0,1'
+            'position' => 'required|string|max:50',
+            'status' => 'nullable|integer|in:0,1'
         ]);
 
         if ($validator->fails()) {
-            return response()->json(['status'=>false,'errors'=>$validator->errors()], 422);
+            return response()->json(['status' => false, 'errors' => $validator->errors()], 422);
         }
 
         $menu = Menu::create([
-            'name'      => $request->name,
-            'link'      => $request->link,
-            'type'      => $request->type,
+            'name' => $request->name,
+            'link' => $request->link,
+            'type' => $request->type,
             'parent_id' => $request->parent_id,
-            'position'  => $request->position,
-            'status'    => $request->status ?? 1
+            'position' => $request->position,
+            'status' => $request->status ?? 1
         ]);
 
         return response()->json([
@@ -120,19 +155,19 @@ class MenuController extends Controller
         }
 
         $validator = Validator::make($request->all(), [
-            'name'      => 'sometimes|required|string|max:150',
-            'link'      => 'sometimes|nullable|string',
-            'type'      => 'sometimes|required|in:category,topic,post,custom',
+            'name' => 'sometimes|required|string|max:150',
+            'link' => 'sometimes|nullable|string',
+            'type' => 'sometimes|required|in:category,topic,post,custom',
             'parent_id' => 'sometimes|nullable|integer|exists:menu,id',
-            'position'  => 'sometimes|required|string|max:50',
-            'status'    => 'sometimes|required|integer|in:0,1'
+            'position' => 'sometimes|required|string|max:50',
+            'status' => 'sometimes|required|integer|in:0,1'
         ]);
 
         if ($validator->fails()) {
-            return response()->json(['status'=>false,'errors'=>$validator->errors()], 422);
+            return response()->json(['status' => false, 'errors' => $validator->errors()], 422);
         }
 
-        $menu->update($request->only(['name','link','type','parent_id','position','status']));
+        $menu->update($request->only(['name', 'link', 'type', 'parent_id', 'position', 'status']));
 
         return response()->json([
             'status' => true,

@@ -15,19 +15,45 @@ class TopicController extends Controller
     {
         $query = Topic::query();
 
+        /* ================= SEARCH ================= */
+
+        if ($request->filled('keyword')) {
+            $keyword = $request->keyword;
+            $query->where(function ($q) use ($keyword) {
+                $q->where('name', 'like', "%$keyword%")
+                    ->orWhere('slug', 'like', "%$keyword%");
+            });
+        }
+
+        /* ================= FILTER ================= */
+
         if ($request->filled('status')) {
             $query->where('status', $request->status);
         }
 
-        if ($request->filled('search')) {
-            $query->where('name', 'like', "%{$request->search}%");
+        // Lọc theo ngày tạo
+        if ($request->filled('from_date')) {
+            $query->whereDate('created_at', '>=', $request->from_date);
         }
 
-        $limit = (int) $request->get('limit', 10);
-        $page  = (int) $request->get('page', 1);
-        $offset = ($page - 1) * $limit;
-        $total = $query->count();
+        if ($request->filled('to_date')) {
+            $query->whereDate('created_at', '<=', $request->to_date);
+        }
 
+        /* ================= SORT ================= */
+
+        $sortBy = $request->get('sort_by', 'id');          // id | name | created_at
+        $sortOrder = $request->get('sort_order', 'desc'); // asc | desc
+
+        $query->orderBy($sortBy, $sortOrder);
+
+        /* ================= PAGINATION ================= */
+
+        $limit = (int) $request->get('limit', 10);
+        $page = (int) $request->get('page', 1);
+        $offset = ($page - 1) * $limit;
+
+        $total = $query->count();
         $data = $query->offset($offset)->limit($limit)->get();
 
         return response()->json([
@@ -39,6 +65,7 @@ class TopicController extends Controller
         ]);
     }
 
+
     // Chi tiết topic
     public function show(Topic $topic)
     {
@@ -49,8 +76,8 @@ class TopicController extends Controller
     public function store(Request $request)
     {
         $validator = Validator::make($request->all(), [
-            'name'   => 'required|string|max:150',
-            'slug'   => 'nullable|string|max:150|unique:topic,slug',
+            'name' => 'required|string|max:150',
+            'slug' => 'nullable|string|max:150|unique:topic,slug',
             'status' => 'nullable|integer|in:0,1',
         ]);
 

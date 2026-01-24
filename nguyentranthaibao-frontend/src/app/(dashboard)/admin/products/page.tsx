@@ -1,4 +1,5 @@
 "use client";
+
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import {
@@ -10,10 +11,13 @@ import {
   Space,
   Input,
   Pagination,
+  Select,
+  InputNumber,
 } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import ProductService from "@/services/ProductService";
-import { useToast } from "@/context/ToastProvider"; // import hook toast
+import api from "@/services/api";
+import { useToast } from "@/context/ToastProvider";
 
 const IMAGE_BASE = "http://localhost:8000";
 
@@ -30,29 +34,56 @@ interface Product {
   brand?: { id: number; name: string };
 }
 
+interface Option {
+  id: number;
+  name: string;
+}
+
 /* ================= COMPONENT ================= */
 export default function ProductList() {
   const router = useRouter();
-  const toast = useToast(); // Sử dụng toast
+  const toast = useToast();
 
+  /* ===== DATA ===== */
   const [data, setData] = useState<Product[]>([]);
   const [loading, setLoading] = useState(false);
 
+  /* ===== PAGINATION ===== */
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(5);
   const [total, setTotal] = useState(0);
-  const [search, setSearch] = useState("");
 
-  /* ================= FETCH ================= */
+  /* ===== FILTER ===== */
+  const [search, setSearch] = useState("");
+  const [categoryId, setCategoryId] = useState<number | undefined>();
+  const [brandId, setBrandId] = useState<number | undefined>();
+  const [priceFrom, setPriceFrom] = useState<number | undefined>();
+  const [priceTo, setPriceTo] = useState<number | undefined>();
+
+  /* ===== OPTIONS ===== */
+  const [categories, setCategories] = useState<Option[]>([]);
+  const [brands, setBrands] = useState<Option[]>([]);
+
+  /* ================= FETCH OPTIONS ================= */
+  useEffect(() => {
+    api.get("/categories").then((res) => setCategories(res.data.data));
+    api.get("/brands").then((res) => setBrands(res.data.data));
+  }, []);
+
+  /* ================= FETCH PRODUCTS ================= */
   const fetchProducts = useCallback(
-    async (params?: { page?: number; limit?: number; search?: string }) => {
+    async (p = page, l = limit) => {
       try {
         setLoading(true);
 
         const res = await ProductService.list({
-          page: params?.page ?? page,
-          limit: params?.limit ?? limit,
-          search: params?.search ?? search,
+          page: p,
+          limit: l,
+          search,
+          category_id: categoryId,
+          brand_id: brandId,
+          price_from: priceFrom,
+          price_to: priceTo,
           status: 1,
         });
 
@@ -66,12 +97,13 @@ export default function ProductList() {
         setLoading(false);
       }
     },
-    [page, limit, search, toast]
+    [page, limit, search, categoryId, brandId, priceFrom, priceTo, toast]
   );
 
+  /* 🔥 FIX DELAY: gọi API khi FILTER THAY ĐỔI */
   useEffect(() => {
-    fetchProducts({ page: 1 });
-  }, []);
+    fetchProducts(1);
+  }, [search, categoryId, brandId, priceFrom, priceTo]);
 
   /* ================= DELETE ================= */
   const handleDelete = async (id: number) => {
@@ -79,9 +111,7 @@ export default function ProductList() {
       await ProductService.delete(id);
       toast.success("Đã xóa sản phẩm");
 
-      fetchProducts({
-        page: data.length === 1 && page > 1 ? page - 1 : page,
-      });
+      fetchProducts(data.length === 1 && page > 1 ? page - 1 : page);
     } catch {
       toast.error("Xóa thất bại!");
     }
@@ -142,16 +172,10 @@ export default function ProductList() {
         width: 160,
         render: (_v, r) => (
           <Space>
-            <Button
-              type="link"
-              onClick={() => router.push(`/admin/products/${r.id}/show`)}
-            >
+            <Button type="link" onClick={() => router.push(`/admin/products/${r.id}/show`)}>
               Xem
             </Button>
-            <Button
-              type="link"
-              onClick={() => router.push(`/admin/products/${r.id}/edit`)}
-            >
+            <Button type="link" onClick={() => router.push(`/admin/products/${r.id}/edit`)}>
               Sửa
             </Button>
             <Popconfirm
@@ -168,32 +192,64 @@ export default function ProductList() {
         ),
       },
     ],
-    [page, limit, data.length, router, toast]
+    [page, limit, data.length, router]
   );
 
   /* ================= RENDER ================= */
   return (
     <div className="p-4 bg-white rounded-lg shadow-sm">
-      <div className="flex justify-between items-center mb-4 flex-wrap gap-2">
-        <h2 className="text-xl font-bold">Danh sách sản phẩm</h2>
+      <h2 className="text-xl font-bold mb-4">Danh sách sản phẩm</h2>
 
-        <div className="flex gap-2">
-          <Input.Search
-            placeholder="Tìm sản phẩm..."
-            allowClear
-            style={{ width: 220 }}
-            onSearch={(v) => {
-              setSearch(v);
-              fetchProducts({ page: 1, search: v });
-            }}
-          />
-          <Button
-            type="primary"
-            onClick={() => router.push("/admin/products/add")}
-          >
-            + Thêm
-          </Button>
-        </div>
+      {/* ===== FILTER BAR ===== */}
+      <div className="flex flex-wrap gap-2 mb-4">
+        <Input.Search
+          placeholder="Tìm sản phẩm..."
+          allowClear
+          style={{ width: 220 }}
+          onSearch={(v) => setSearch(v)}
+        />
+
+        <Select
+          allowClear
+          placeholder="Danh mục"
+          style={{ width: 180 }}
+          onChange={(v) => setCategoryId(v)}
+        >
+          {categories.map((c) => (
+            <Select.Option key={c.id} value={c.id}>
+              {c.name}
+            </Select.Option>
+          ))}
+        </Select>
+
+        <Select
+          allowClear
+          placeholder="Brand"
+          style={{ width: 160 }}
+          onChange={(v) => setBrandId(v)}
+        >
+          {brands.map((b) => (
+            <Select.Option key={b.id} value={b.id}>
+              {b.name}
+            </Select.Option>
+          ))}
+        </Select>
+
+        <InputNumber
+          placeholder="Giá từ"
+          min={0}
+          onChange={(v) => setPriceFrom(v ?? undefined)}
+        />
+
+        <InputNumber
+          placeholder="Giá đến"
+          min={0}
+          onChange={(v) => setPriceTo(v ?? undefined)}
+        />
+
+        <Button onClick={() => router.push("/admin/products/add")}>
+          + Thêm
+        </Button>
       </div>
 
       <Table
@@ -214,8 +270,8 @@ export default function ProductList() {
           showSizeChanger
           showQuickJumper
           pageSizeOptions={["5", "10", "20", "50"]}
-          onChange={(p, l) => fetchProducts({ page: p, limit: l })}
-          onShowSizeChange={(_, l) => fetchProducts({ page: 1, limit: l })}
+          onChange={(p, l) => fetchProducts(p, l)}
+          onShowSizeChange={(_, l) => fetchProducts(1, l)}
           showTotal={(t, r) => `${r[0]}-${r[1]} trên ${t} sản phẩm`}
         />
       </div>

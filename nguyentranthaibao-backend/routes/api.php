@@ -70,7 +70,7 @@ Route::get('/payments/vnpay-return', [PaymentController::class, 'vnpayReturn']);
 Route::get('/categories', [CategoryController::class, 'index']);
 Route::get('/categories/{category}', [CategoryController::class, 'show']);
 Route::get('/brands', [BrandController::class, 'index']);
-Route::get('/menus', [MenuController::class, 'index']);
+Route::apiResource('menus', MenuController::class);
 
 // Product
 Route::get('/products', [ProductController::class, 'index']);
@@ -144,17 +144,21 @@ Route::middleware('jwt.auth')->group(function () {
     Route::apiResource('review-likes', ReviewLikeController::class)
         ->only(['store', 'destroy']);
 
+    Route::apiResource('contacts', ContactController::class);
+
 
     // Voucher
     // Voucher
     Route::get('/voucher-claims', [VoucherClaimController::class, 'index']);
     Route::post('/voucher-claims', [VoucherClaimController::class, 'store']);
     Route::get('/my-vouchers', [VoucherUserController::class, 'index']);
+    Route::apiResource('vouchers', VoucherController::class)->except(['index', 'show']);
+    Route::apiResource('voucher-users', VoucherUserController::class);
 
 
     // Post cá nhân
     Route::apiResource('posts', PostController::class)->except(['index', 'show']);
-    
+
 
     // Payment
     Route::get('/payments', [PaymentController::class, 'index']);
@@ -178,11 +182,10 @@ Route::middleware('jwt.auth')->group(function () {
 Route::middleware(['jwt.auth', CheckAdmin::class])->group(function () {
 
 
-    
+
     Route::apiResource('categories', CategoryController::class)->except(['index', 'show']);
     Route::apiResource('topics', TopicController::class);
-    Route::apiResource('menus', MenuController::class);
-    Route::apiResource('contacts', ContactController::class);
+    
 
     // Product
     Route::apiResource('products', ProductController::class)->except(['index', 'show']);
@@ -190,8 +193,7 @@ Route::middleware(['jwt.auth', CheckAdmin::class])->group(function () {
     Route::apiResource('product-sales', ProductSaleController::class)->except(['index', 'show']);
 
     // Voucher
-    Route::apiResource('vouchers', VoucherController::class)->except(['index', 'show']);
-    Route::apiResource('voucher-users', VoucherUserController::class);
+
 
     // Banner – Setting
     Route::apiResource('banners', BannerController::class)->except(['index']);

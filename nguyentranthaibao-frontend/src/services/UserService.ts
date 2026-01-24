@@ -29,10 +29,25 @@ export interface PaginatedResponse<T> {
 }
 
 /**
- * Response khi xóa
+ * Response message
  */
 export interface ApiMessage {
   message: string;
+}
+
+/**
+ * Params list user
+ */
+export interface UserListParams {
+  search?: string;
+  role?: "customer" | "admin";
+  status?: 0 | 1;
+  from_date?: string; // YYYY-MM-DD
+  to_date?: string;   // YYYY-MM-DD
+  sort_by?: "id" | "name" | "email" | "created_at";
+  sort_order?: "asc" | "desc";
+  page?: number;
+  limit?: number;
 }
 
 /**
@@ -40,17 +55,9 @@ export interface ApiMessage {
  */
 const UserService = {
   /**
-   * Lấy danh sách user (search + filter + phân trang)
+   * Lấy danh sách user (search + filter + sort + phân trang)
    */
-  async list(
-    params?: Partial<{
-      search: string;
-      role: string;
-      status: number;
-      page: number;
-      limit: number;
-    }>
-  ): Promise<PaginatedResponse<User>> {
+  async list(params?: UserListParams): Promise<PaginatedResponse<User>> {
     const res = await api.get("/users", { params });
     return res.data;
   },
@@ -68,18 +75,22 @@ const UserService = {
    */
   async create(formData: FormData): Promise<User> {
     const res = await api.post("/users", formData, {
-      headers: { "Content-Type": "multipart/form-data" },
+      headers: {
+        "Content-Type": "multipart/form-data",
+      },
     });
     return res.data;
   },
 
   /**
    * Cập nhật user (có upload avatar)
-   * PUT không gửi được file → dùng POST + _method=PUT
+   * Laravel: PUT không gửi file → dùng POST + _method=PUT
    */
   async update(id: number, formData: FormData): Promise<User> {
     const res = await api.post(`/users/${id}?_method=PUT`, formData, {
-      headers: { "Content-Type": "multipart/form-data" },
+      headers: {
+        "Content-Type": "multipart/form-data",
+      },
     });
     return res.data;
   },

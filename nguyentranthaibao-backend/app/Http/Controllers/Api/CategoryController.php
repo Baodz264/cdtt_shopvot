@@ -17,23 +17,46 @@ class CategoryController extends Controller
     {
         $query = Category::query();
 
+        /* ================= FILTER ================= */
+
         // Filter theo status
         if ($request->filled('status')) {
             $query->where('status', $request->status);
         }
 
-        // Search theo name
+        // Search theo name hoặc slug
         if ($request->filled('search')) {
             $search = $request->search;
-            $query->where('name', 'like', "%$search%");
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'like', "%$search%")
+                    ->orWhere('slug', 'like', "%$search%");
+            });
         }
 
+        // Lọc theo ngày tạo
+        if ($request->filled('from_date')) {
+            $query->whereDate('created_at', '>=', $request->from_date);
+        }
+
+        if ($request->filled('to_date')) {
+            $query->whereDate('created_at', '<=', $request->to_date);
+        }
+
+        /* ================= SORT ================= */
+
+        $sortBy = $request->get('sort_by', 'id');      // id | name | created_at
+        $sortOrder = $request->get('sort_order', 'desc'); // asc | desc
+
+        $query->orderBy($sortBy, $sortOrder);
+
+        /* ================= PAGINATION ================= */
+
         $limit = (int) $request->get('limit', 10);
-        $page  = (int) $request->get('page', 1);
+        $page = (int) $request->get('page', 1);
         $offset = ($page - 1) * $limit;
 
         $total = $query->count();
-        $data  = $query->orderBy('id', 'desc')->offset($offset)->limit($limit)->get();
+        $data = $query->offset($offset)->limit($limit)->get();
 
         return response()->json([
             'page' => $page,
@@ -43,6 +66,7 @@ class CategoryController extends Controller
             'data' => $data,
         ]);
     }
+
 
     /**
      * Chi tiết Category
@@ -58,9 +82,9 @@ class CategoryController extends Controller
     public function store(Request $request)
     {
         $validator = Validator::make($request->all(), [
-            'name'   => 'required|string|max:150',
-            'slug'   => 'nullable|string|max:150|unique:category,slug',
-            'image'  => 'nullable|image|mimes:jpeg,png,jpg,gif|max:4096',
+            'name' => 'required|string|max:150',
+            'slug' => 'nullable|string|max:150|unique:category,slug',
+            'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:4096',
             'status' => 'nullable|integer|in:0,1',
         ]);
 
@@ -95,9 +119,9 @@ class CategoryController extends Controller
     public function update(Request $request, Category $category)
     {
         $validator = Validator::make($request->all(), [
-            'name'   => 'sometimes|required|string|max:150',
-            'slug'   => 'sometimes|string|max:150',
-            'image'  => 'sometimes|nullable|image|mimes:jpeg,png,jpg,gif|max:4096',
+            'name' => 'sometimes|required|string|max:150',
+            'slug' => 'sometimes|string|max:150',
+            'image' => 'sometimes|nullable|image|mimes:jpeg,png,jpg,gif|max:4096',
             'status' => 'sometimes|required|integer|in:0,1',
         ]);
 
@@ -105,7 +129,7 @@ class CategoryController extends Controller
             return response()->json(['errors' => $validator->errors()], 422);
         }
 
-        $data = $request->only(['name','status']);
+        $data = $request->only(['name', 'status']);
 
         // Xử lý slug
         if ($request->filled('slug')) {

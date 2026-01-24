@@ -11,14 +11,12 @@ use Illuminate\Support\Facades\Validator;
 class ProductController extends Controller
 {
     /**
-     * Lấy danh sách sản phẩm (có lọc + slug)
-     * GET /api/products
+     * Lấy danh sách sản phẩm
      */
     public function index(Request $request)
     {
         $query = Product::with(['brand', 'category']);
 
-        /* ================= LỌC ================= */
         if ($request->filled('status')) {
             $query->where('status', $request->status);
         }
@@ -31,12 +29,10 @@ class ProductController extends Controller
             $query->where('brand_id', $request->brand_id);
         }
 
-        // 🔥 LỌC THEO SLUG
         if ($request->filled('slug')) {
             $query->where('slug', $request->slug);
         }
 
-        // ===== LỌC THEO GIÁ =====
         if ($request->filled('price_from')) {
             $query->where('price', '>=', (float) $request->price_from);
         }
@@ -45,7 +41,6 @@ class ProductController extends Controller
             $query->where('price', '<=', (float) $request->price_to);
         }
 
-        /* ================= TÌM KIẾM ================= */
         if ($request->filled('search')) {
             $search = $request->search;
             $query->where(function ($q) use ($search) {
@@ -54,7 +49,6 @@ class ProductController extends Controller
             });
         }
 
-        /* ================= SẮP XẾP ================= */
         $allowedSorts = ['id', 'name', 'price', 'sale_price', 'stock', 'created_at'];
         $sortBy = in_array($request->get('sortBy'), $allowedSorts)
             ? $request->get('sortBy')
@@ -63,14 +57,11 @@ class ProductController extends Controller
         $sortOrder = $request->get('sortOrder') === 'asc' ? 'asc' : 'desc';
         $query->orderBy($sortBy, $sortOrder);
 
-        /* ================= PHÂN TRANG ================= */
         $limit = max((int) $request->get('limit', 10), 1);
         $total = $query->count();
-
         $totalPage = max((int) ceil($total / $limit), 1);
 
-        $page = (int) $request->get('page', 1);
-        $page = max(1, min($page, $totalPage));
+        $page = max(1, min((int) $request->get('page', 1), $totalPage));
 
         $data = $query
             ->offset(($page - 1) * $limit)
@@ -86,20 +77,12 @@ class ProductController extends Controller
         ]);
     }
 
-    /**
-     * Chi tiết sản phẩm theo ID
-     * GET /api/products/{id}
-     */
     public function show(Product $product)
     {
         $product->load(['brand', 'category']);
         return response()->json($product);
     }
 
-    /**
-     * Chi tiết sản phẩm theo SLUG (SEO)
-     * GET /api/products/slug/{slug}
-     */
     public function showBySlug($slug)
     {
         $product = Product::with(['brand', 'category'])
@@ -107,9 +90,7 @@ class ProductController extends Controller
             ->first();
 
         if (!$product) {
-            return response()->json([
-                'message' => 'Product not found'
-            ], 404);
+            return response()->json(['message' => 'Product not found'], 404);
         }
 
         return response()->json($product);
@@ -117,23 +98,47 @@ class ProductController extends Controller
 
     /**
      * Thêm sản phẩm
-     * POST /api/products
      */
     public function store(Request $request)
     {
         $validator = Validator::make($request->all(), [
             'brand_id' => 'nullable|exists:brand,id',
             'category_id' => 'nullable|exists:category,id',
-            'name' => 'required|string|max:200',
-            'slug' => 'nullable|string|max:200|unique:product,slug',
-            'price' => 'required|numeric',
-            'sale_price' => 'nullable|numeric',
-            'sku' => 'nullable|string|max:100',
-            'stock' => 'nullable|integer',
+
+            'name' => [
+                'required',
+                'string',
+                'max:200',
+                'regex:/^[\pL0-9\s\-]+$/u'
+            ],
+
+            'slug' => [
+                'nullable',
+                'string',
+                'max:200',
+                'unique:product,slug',
+                'regex:/^[a-z0-9\-]+$/'
+            ],
+
+            'price' => 'required|numeric|min:0',
+            'sale_price' => 'nullable|numeric|min:0|lte:price',
+
+            'sku' => [
+                'nullable',
+                'string',
+                'max:100',
+                'regex:/^[\pL0-9\-]+$/u'
+            ],
+
+            'stock' => 'nullable|integer|min:0',
             'thumbnail' => 'sometimes|image|mimes:jpeg,png,jpg,gif|max:4096',
             'description' => 'nullable|string',
             'detail' => 'nullable|string',
             'status' => 'nullable|integer|in:0,1',
+        ], [
+            'name.regex' => 'Tên sản phẩm không được chứa ký tự đặc biệt',
+            'slug.regex' => 'Slug chỉ gồm chữ thường, số và dấu gạch ngang',
+            'sku.regex'  => 'SKU không được chứa ký tự đặc biệt',
         ]);
 
         if ($validator->fails()) {
@@ -142,17 +147,19 @@ class ProductController extends Controller
 
         $data = $request->except('thumbnail');
 
-        /* ===== Upload ảnh ===== */
+        if (isset($data['sale_price'], $data['price']) && $data['sale_price'] >= $data['price']) {
+            $data['sale_price'] = null;
+        }
+
         if ($request->hasFile('thumbnail')) {
             $data['thumbnail'] = $this->uploadLocal($request->file('thumbnail'));
         }
 
-        /* ===== XỬ LÝ SLUG ===== */
         $slug = $request->slug ?: Str::slug($request->name);
-        $slugBase = $slug;
+        $base = $slug;
         $i = 1;
         while (Product::where('slug', $slug)->exists()) {
-            $slug = $slugBase . '-' . $i++;
+            $slug = $base . '-' . $i++;
         }
         $data['slug'] = $slug;
 
@@ -164,23 +171,48 @@ class ProductController extends Controller
 
     /**
      * Cập nhật sản phẩm
-     * PUT /api/products/{id}
      */
     public function update(Request $request, Product $product)
     {
         $validator = Validator::make($request->all(), [
             'brand_id' => 'sometimes|nullable|exists:brand,id',
             'category_id' => 'sometimes|nullable|exists:category,id',
-            'name' => 'sometimes|required|string|max:200',
-            'slug' => 'sometimes|string|max:200|unique:product,slug,' . $product->id,
-            'price' => 'sometimes|required|numeric',
-            'sale_price' => 'sometimes|numeric',
-            'sku' => 'sometimes|string|max:100',
-            'stock' => 'sometimes|integer',
+
+            'name' => [
+                'sometimes',
+                'required',
+                'string',
+                'max:200',
+                'regex:/^[\pL0-9\s\-]+$/u'
+            ],
+
+            'slug' => [
+                'sometimes',
+                'string',
+                'max:200',
+                'unique:product,slug,' . $product->id,
+                'regex:/^[a-z0-9\-]+$/'
+            ],
+
+            'price' => 'sometimes|required|numeric|min:0',
+            'sale_price' => 'sometimes|nullable|numeric|min:0|lte:price',
+
+            'sku' => [
+                'sometimes',
+                'string',
+                'max:100',
+                'regex:/^[\pL0-9\-]+$/u'
+            ],
+
+            'stock' => 'sometimes|integer|min:0',
             'thumbnail' => 'sometimes|image|mimes:jpeg,png,jpg,gif|max:4096',
             'description' => 'sometimes|string',
             'detail' => 'sometimes|string',
             'status' => 'sometimes|integer|in:0,1',
+        ], [
+            'name.regex' => 'Tên sản phẩm không được chứa ký tự đặc biệt',
+            'slug.regex' => 'Slug chỉ gồm chữ thường, số và dấu gạch ngang',
+            'sku.regex'  => 'SKU không được chứa ký tự đặc biệt',
         ]);
 
         if ($validator->fails()) {
@@ -189,7 +221,10 @@ class ProductController extends Controller
 
         $data = $request->except('thumbnail');
 
-        /* ===== Upload ảnh mới ===== */
+        if (isset($data['sale_price'], $data['price']) && $data['sale_price'] >= $data['price']) {
+            $data['sale_price'] = null;
+        }
+
         if ($request->hasFile('thumbnail')) {
             if ($product->thumbnail && file_exists(public_path($product->thumbnail))) {
                 unlink(public_path($product->thumbnail));
@@ -197,23 +232,17 @@ class ProductController extends Controller
             $data['thumbnail'] = $this->uploadLocal($request->file('thumbnail'));
         }
 
-        /* ===== XỬ LÝ SLUG ===== */
-        if (!empty($data['slug'])) {
-            $slug = Str::slug($data['slug']);
-        } elseif (!empty($data['name'])) {
-            $slug = Str::slug($data['name']);
-        } else {
-            $slug = $product->slug;
-        }
+        $slug = $data['slug'] ?? ($data['name'] ?? $product->slug);
+        $slug = Str::slug($slug);
 
-        $slugBase = $slug;
+        $base = $slug;
         $i = 1;
         while (
             Product::where('slug', $slug)
                 ->where('id', '!=', $product->id)
                 ->exists()
         ) {
-            $slug = $slugBase . '-' . $i++;
+            $slug = $base . '-' . $i++;
         }
 
         $data['slug'] = $slug;
@@ -224,10 +253,6 @@ class ProductController extends Controller
         return response()->json($product);
     }
 
-    /**
-     * Xóa sản phẩm
-     * DELETE /api/products/{id}
-     */
     public function destroy(Product $product)
     {
         if ($product->thumbnail && file_exists(public_path($product->thumbnail))) {
@@ -236,14 +261,9 @@ class ProductController extends Controller
 
         $product->delete();
 
-        return response()->json([
-            'message' => 'Product deleted successfully'
-        ]);
+        return response()->json(['message' => 'Product deleted successfully']);
     }
 
-    /**
-     * Upload ảnh local
-     */
     private function uploadLocal($file)
     {
         $folder = public_path('uploads/products');
@@ -255,9 +275,8 @@ class ProductController extends Controller
         $filename = time() . '_' . Str::slug(
             pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME)
         );
-        $extension = $file->getClientOriginalExtension();
 
-        $finalName = $filename . '.' . $extension;
+        $finalName = $filename . '.' . $file->getClientOriginalExtension();
         $file->move($folder, $finalName);
 
         return '/uploads/products/' . $finalName;

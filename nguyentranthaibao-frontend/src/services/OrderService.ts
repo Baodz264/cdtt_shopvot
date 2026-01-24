@@ -32,13 +32,7 @@ export interface OrderItem {
   updated_at?: string;
 }
 
-export interface OrderDetailResponse {
-  id: number;
-  fullname: string;
-  phone: string;
-  total_money: number;
-  status: OrderStatus;
-  payment_status: PaymentStatus;
+export interface OrderDetailResponse extends Order {
   items: OrderItem[];
 }
 
@@ -52,6 +46,24 @@ export interface OrderListResponse {
 
 export interface ApiMessageResponse {
   message: string;
+}
+
+/* ================= REQUEST TYPES ================= */
+
+export interface OrderListParams {
+  page?: number;
+  limit?: number;
+  user_id?: number;
+  status?: OrderStatus;
+  payment_status?: PaymentStatus;
+  payment_method?: PaymentMethod;
+  min_total?: number;
+  max_total?: number;
+  from_date?: string; // yyyy-mm-dd
+  to_date?: string;   // yyyy-mm-dd
+  keyword?: string;
+  sort_by?: "created_at" | "total_money";
+  sort_order?: "asc" | "desc";
 }
 
 export interface CreateOrderRequest {
@@ -79,14 +91,11 @@ export interface UpdateOrderRequest {
   discount_price?: number | null;
 }
 
+/* ================= SERVICE ================= */
+
 const OrderService = {
-  // Lấy danh sách đơn hàng
-  async list(params?: {
-    page?: number;
-    limit?: number;
-    user_id?: number;
-    status?: OrderStatus;
-  }): Promise<OrderListResponse> {
+  // Lấy danh sách đơn hàng (FULL FILTER)
+  async list(params?: OrderListParams): Promise<OrderListResponse> {
     const response = await api.get<OrderListResponse>("/orders", { params });
     return response.data;
   },

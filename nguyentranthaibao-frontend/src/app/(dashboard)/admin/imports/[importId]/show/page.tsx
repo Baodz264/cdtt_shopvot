@@ -1,9 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { Table, Button, InputNumber, Space, Card, Modal, Spin, Select } from "antd";
 import type { ColumnsType } from "antd/es/table";
+import { useReactToPrint } from "react-to-print";
+import { PrinterOutlined, LeftOutlined, PlusOutlined } from "@ant-design/icons";
 
 import ImportService, { Import } from "@/services/ImportService";
 import ImportItemService, { ImportItem } from "@/services/ImportItemService";
@@ -30,6 +32,7 @@ export default function ImportShowPage() {
   const { importId } = useParams();
   const router = useRouter();
   const toast = useToast();
+  const printRef = useRef<HTMLDivElement>(null);
 
   const [importData, setImportData] = useState<Import | null>(null);
   const [items, setItems] = useState<ImportItem[]>([]);
@@ -38,14 +41,18 @@ export default function ImportShowPage() {
   const [editingItem, setEditingItem] = useState<ImportItem | null>(null);
   const [adding, setAdding] = useState(false);
 
+  // ================= CẤU HÌNH IN =================
+  const handlePrint = useReactToPrint({
+    contentRef: printRef,
+    documentTitle: `Phieu_Nhap_Kho_${importId}`,
+  });
+
   // ================= LOAD DATA =================
   useEffect(() => {
     const fetchData = async () => {
       if (!importId) return;
-
       try {
         setLoading(true);
-
         const importResp: Import = await ImportService.get(Number(importId));
         setImportData(importResp);
 
@@ -71,7 +78,6 @@ export default function ImportShowPage() {
         setLoading(false);
       }
     };
-
     fetchData();
   }, [importId, toast]);
 
@@ -90,7 +96,6 @@ export default function ImportShowPage() {
       }
 
       let savedItem: ImportItem;
-
       if (adding) {
         savedItem = await ImportItemService.create({
           import_id: Number(importId),
@@ -109,16 +114,13 @@ export default function ImportShowPage() {
         setItems(items.map((i) => (i.id === item.id ? savedItem : i)));
       }
 
-      // ================= UPDATE PRODUCT STOCK =================
       const productResp = (await ProductService.get(item.product_id)) as ProductDetailResponse;
       const currentStock = productResp.data?.stock ?? 0;
       const newStock = adding
         ? currentStock + item.quantity
         : currentStock - oldQuantity + item.quantity;
 
-      const productUpdate: ProductPayload = { stock: newStock };
-      await ProductService.update(item.product_id, productUpdate);
-
+      await ProductService.update(item.product_id, { stock: newStock });
       setEditingItem(null);
       toast.success("Lưu thành công!");
     } catch (err) {
@@ -127,35 +129,31 @@ export default function ImportShowPage() {
     }
   };
 
-  // ================= DELETE ITEM =================
   const handleDelete = (id: number) => {
     Modal.confirm({
       title: "Xác nhận",
-      content: "Bạn có chắc muốn xóa?",
+      content: "Bạn có chắc muốn xóa sản phẩm này khỏi phiếu nhập?",
       okType: "danger",
       onOk: async () => {
         try {
           const deletedItem = items.find((i) => i.id === id);
           if (!deletedItem) return;
-
           await ImportItemService.delete(id);
           setItems(items.filter((i) => i.id !== id));
 
-          // Giảm stock sản phẩm
           const productResp = (await ProductService.get(deletedItem.product_id)) as ProductDetailResponse;
           const currentStock = productResp.data?.stock ?? 0;
-          const newStock = currentStock - deletedItem.quantity;
-          const productUpdate: ProductPayload = { stock: newStock };
-          await ProductService.update(deletedItem.product_id, productUpdate);
-
+          await ProductService.update(deletedItem.product_id, { stock: currentStock - deletedItem.quantity });
           toast.success("Xóa thành công!");
         } catch (err) {
-          console.error(err);
           toast.error("Xóa thất bại!");
         }
       },
     });
   };
+
+  // Tính tổng tiền phiếu nhập
+  const totalAmount = items.reduce((sum, item) => sum + item.quantity * item.price, 0);
 
   // ================= TABLE COLUMNS =================
   const columns: ColumnsType<ImportItem> = [
@@ -165,7 +163,7 @@ export default function ImportShowPage() {
       render: (_text, record) =>
         editingItem?.id === record.id ? (
           <Select
-            style={{ width: 250 }}
+            style={{ width: "100%" }}
             placeholder="Chọn sản phẩm"
             value={editingItem.product_id}
             onChange={(value: number) => {
@@ -175,18 +173,14 @@ export default function ImportShowPage() {
                   ...editingItem,
                   product_id: selected.id,
                   price: selected.price,
-                  product: {
-                    id: selected.id,
-                    name: selected.name,
-                    price: selected.price,
-                  },
+                  product: { id: selected.id, name: selected.name, price: selected.price },
                 });
               }
             }}
           >
             {products.map((p) => (
               <Select.Option key={p.id} value={p.id}>
-                {p.name} — {p.price.toLocaleString()}₫
+                {p.name} ({p.price.toLocaleString()}₫)
               </Select.Option>
             ))}
           </Select>
@@ -203,105 +197,155 @@ export default function ImportShowPage() {
           <InputNumber
             min={1}
             value={editingItem.quantity}
-            onChange={(value) =>
-              setEditingItem({ ...editingItem, quantity: value || 1 })
-            }
+            onChange={(value) => setEditingItem({ ...editingItem, quantity: value || 1 })}
           />
-        ) : (
-          record.quantity
-        ),
+        ) : record.quantity,
     },
     {
-      title: "Giá",
+      title: "Đơn giá",
       dataIndex: "price",
-      align: "center",
+      align: "right",
       render: (_text, record) =>
         editingItem?.id === record.id ? (
           <InputNumber
             min={0}
             value={editingItem.price}
-            onChange={(value) =>
-              setEditingItem({ ...editingItem, price: value || 0 })
-            }
+            onChange={(value) => setEditingItem({ ...editingItem, price: value || 0 })}
           />
-        ) : (
-          record.price.toLocaleString()
-        ),
+        ) : `${record.price.toLocaleString()}₫`,
+    },
+    {
+      title: "Thành tiền",
+      align: "right",
+      className: "print-only-cell",
+      render: (_, record) => `${(record.quantity * record.price).toLocaleString()}₫`,
     },
     {
       title: "Hành động",
       align: "center",
+      className: "no-print", // Ẩn khi in
       render: (_text, record) =>
         editingItem?.id === record.id ? (
           <Space>
-            <Button type="primary" onClick={() => handleSave(editingItem)}>
-              Lưu
-            </Button>
-            <Button onClick={() => setEditingItem(null)}>Hủy</Button>
+            <Button type="primary" size="small" onClick={() => handleSave(editingItem)}>Lưu</Button>
+            <Button size="small" onClick={() => setEditingItem(null)}>Hủy</Button>
           </Space>
         ) : (
           <Space>
-            <Button type="link" onClick={() => setEditingItem(record)}>
-              Sửa
-            </Button>
-            <Button type="link" danger onClick={() => handleDelete(record.id)}>
-              Xóa
-            </Button>
+            <Button type="link" size="small" onClick={() => setEditingItem(record)}>Sửa</Button>
+            <Button type="link" size="small" danger onClick={() => handleDelete(record.id)}>Xóa</Button>
           </Space>
         ),
     },
   ];
 
-  // ================= UI =================
-  if (loading) {
-    return (
-      <div className="p-6 text-center">
-        <Spin size="large" />
-      </div>
-    );
-  }
-
-  if (!importData) {
-    return <div className="p-6 text-center">Không tìm thấy dữ liệu import</div>;
-  }
+  if (loading) return <div className="p-6 text-center"><Spin size="large" /></div>;
+  if (!importData) return <div className="p-6 text-center">Không tìm thấy dữ liệu</div>;
 
   return (
     <div className="p-6">
-      <Card title={`Chi tiết Import #${importData.id}`} className="mb-6 shadow-md">
-        <p><strong>Người tạo:</strong> {importData.user?.name || "Unknown"}</p>
-        <p><strong>Ghi chú:</strong> {importData.note || "Không có"}</p>
-        <p><strong>Ngày tạo:</strong> {importData.created_at}</p>
-
-        <Button
-          type="primary"
-          className="mt-4"
-          onClick={() => {
-            setAdding(true);
-            setEditingItem({
-              id: Date.now(),
-              import_id: Number(importId),
-              product_id: 0,
-              quantity: 1,
-              price: 0,
-            } as ImportItem);
-          }}
-        >
-          Thêm sản phẩm
+      {/* THANH CÔNG CỤ NGOÀI VÙNG IN */}
+      <div className="mb-4 flex justify-between items-center">
+        <Button icon={<LeftOutlined />} onClick={() => router.push("/admin/imports")}>
+          Quay lại
         </Button>
-      </Card>
+        <Space>
+          <Button 
+            icon={<PrinterOutlined />} 
+            onClick={() => handlePrint()}
+            disabled={adding}
+          >
+            In phiếu nhập
+          </Button>
+          <Button 
+            type="primary" 
+            icon={<PlusOutlined />} 
+            onClick={() => {
+              setAdding(true);
+              setEditingItem({
+                id: Date.now(),
+                import_id: Number(importId),
+                product_id: 0,
+                quantity: 1,
+                price: 0,
+              } as ImportItem);
+            }}
+          >
+            Thêm sản phẩm
+          </Button>
+        </Space>
+      </div>
 
-      <Card title="Danh sách sản phẩm" className="shadow-md">
-        <Table
-          dataSource={adding && editingItem ? [editingItem, ...items] : items}
-          columns={columns}
-          rowKey="id"
-          pagination={false}
-        />
+      {/* VÙNG SẼ ĐƯỢC IN */}
+      <div ref={printRef} className="print-wrapper">
+        <style dangerouslySetInnerHTML={{ __html: `
+          @media print {
+            @page { size: A4; margin: 20mm; }
+            .no-print { display: none !important; }
+            .ant-card { border: none !important; box-shadow: none !important; }
+            .ant-card-head { border-bottom: 2px solid #000 !important; }
+            .print-wrapper { padding: 0; color: #000; }
+            .ant-table-thead > tr > th { background: #f0f0f0 !important; color: #000 !important; }
+          }
+        `}} />
 
-        <Button type="link" className="mt-4" onClick={() => router.push("/admin/imports")}>
-          Quay lại danh sách Import
-        </Button>
-      </Card>
+        <Card className="mb-6 shadow-md border-t-4 border-blue-500">
+          <div className="flex justify-between items-start">
+            <div>
+              <h1 className="text-2xl font-bold uppercase mb-4">Phiếu Nhập Kho</h1>
+              <p><strong>Mã phiếu:</strong> #{importData.id}</p>
+              <p><strong>Ngày tạo:</strong> {importData.created_at}</p>
+            </div>
+            <div className="text-right">
+              <h3 className="font-bold text-lg">Bảo vippro</h3>
+              <p>Địa chỉ: 109 Tăng nhơn Phú</p>
+              <p>Điện thoại: 0353819007</p>
+            </div>
+          </div>
+          
+          <div className="mt-4 border-t pt-4">
+            <p><strong>Người phụ trách:</strong> {importData.user?.name || "N/A"}</p>
+            <p><strong>Ghi chú:</strong> {importData.note || "..."}</p>
+          </div>
+        </Card>
+
+        <Card title="Danh mục hàng hóa" className="shadow-md">
+          <Table
+            dataSource={adding && editingItem ? [editingItem, ...items] : items}
+            columns={columns}
+            rowKey="id"
+            pagination={false}
+            summary={() => (
+              <Table.Summary fixed>
+                <Table.Summary.Row>
+                  <Table.Summary.Cell index={0} colSpan={3} align="right">
+                    <strong className="text-lg">Tổng cộng:</strong>
+                  </Table.Summary.Cell>
+                  <Table.Summary.Cell index={1} align="right">
+                    <strong className="text-lg text-red-600">{totalAmount.toLocaleString()}₫</strong>
+                  </Table.Summary.Cell>
+                  <Table.Summary.Cell index={2} className="no-print" />
+                </Table.Summary.Row>
+              </Table.Summary>
+            )}
+          />
+
+          <div className="mt-12 hidden print:flex justify-around text-center">
+            <div>
+              <p className="font-bold">Người lập phiếu</p>
+              <p className="italic text-sm">(Ký, họ tên)</p>
+            </div>
+            <div>
+              <p className="font-bold">Người giao hàng</p>
+              <p className="italic text-sm">(Ký, họ tên)</p>
+            </div>
+            <div>
+              <p className="font-bold">Thủ kho</p>
+              <p className="italic text-sm">(Ký, họ tên)</p>
+            </div>
+          </div>
+        </Card>
+      </div>
     </div>
   );
 }

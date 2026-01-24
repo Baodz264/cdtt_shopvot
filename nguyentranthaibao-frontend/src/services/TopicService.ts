@@ -1,7 +1,7 @@
 import api from "./api";
 
 /**
- * Interface Topic theo API Laravel
+ * Interface Topic
  */
 export interface Topic {
   id?: number;
@@ -24,7 +24,7 @@ export interface PaginatedResponse<T> {
 }
 
 /**
- * Response khi xóa
+ * Response message
  */
 export interface ApiMessage {
   message: string;
@@ -35,12 +35,21 @@ export interface ApiMessage {
  */
 const TopicService = {
   /**
-   * Lấy danh sách topic (search + status + phân trang)
+   * Lấy danh sách topic
+   * - keyword
+   * - status
+   * - from_date / to_date
+   * - sort_by / sort_order
+   * - page / limit
    */
   async list(
     params?: Partial<{
-      search: string;
+      keyword: string;
       status: number;
+      from_date: string; // yyyy-mm-dd
+      to_date: string;   // yyyy-mm-dd
+      sort_by: "id" | "name" | "created_at";
+      sort_order: "asc" | "desc";
       page: number;
       limit: number;
     }>

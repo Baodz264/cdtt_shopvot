@@ -4,162 +4,207 @@ import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import PostService, { Post } from "@/services/PostService";
 import PostImageService, { PostImage } from "@/services/PostImageService";
-import { ArrowLeft, Clock, Eye, Share2, ChevronLeft } from "lucide-react";
+import { Clock, Eye, Share2, ChevronLeft } from "lucide-react";
 
 const IMAGE_BASE = "http://localhost:8000";
 
 export default function PostDetail() {
   const params = useParams();
   const router = useRouter();
+
   const [post, setPost] = useState<Post | null>(null);
   const [gallery, setGallery] = useState<PostImage[]>([]);
+  const [recommended, setRecommended] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Logic giữ nguyên để đảm bảo code chạy
   const getImageUrl = (path?: string) => {
-    if (!path) return "https://images.unsplash.com/photo-1499750310107-5fef28a66643?q=80&w=1000";
-    return path.startsWith("http") ? path : `${IMAGE_BASE}${path.startsWith("/") ? "" : "/"}${path}`;
+    if (!path)
+      return "https://images.unsplash.com/photo-1499750310107-5fef28a66643";
+    return path.startsWith("http")
+      ? path
+      : `${IMAGE_BASE}${path.startsWith("/") ? "" : "/"}${path}`;
   };
 
   const formatDate = (date?: string) => {
     if (!date) return "";
-    const d = new Date(date);
-    return d.toLocaleDateString("vi-VN", { day: 'numeric', month: 'long', year: 'numeric' });
+    return new Date(date).toLocaleDateString("vi-VN", {
+      day: "numeric",
+      month: "long",
+      year: "numeric",
+    });
   };
 
   useEffect(() => {
-    let postSlug = params?.postSlug;
-    if (Array.isArray(postSlug)) postSlug = postSlug[0];
-    if (!postSlug) return;
+    let slug = params?.postSlug;
+    if (Array.isArray(slug)) slug = slug[0];
+    if (!slug) return;
 
-    const fetchPostAndGallery = async () => {
+    const fetchData = async () => {
       try {
         setLoading(true);
-        const postRes = await PostService.detailBySlug(postSlug);
-        const postData = postRes.data as Post;
+
+        const postRes = await PostService.detailBySlug(slug);
+        const postData = postRes.data;
         setPost(postData);
-        
-        PostService.increaseView(postData.id).catch(console.error);
-        const galleryRes = await PostImageService.list({ post_id: postData.id });
+
+        // tăng view (không block UI)
+        PostService.increaseView(postData.id).catch(() => {});
+
+        // gallery
+        const galleryRes = await PostImageService.list({
+          post_id: postData.id,
+        });
         setGallery(galleryRes.data.data || []);
-      } catch (error) {
-        console.error(error);
+
+        // tin tức đề xuất (cùng topic)
+        if (postData.topic_id) {
+          const relatedRes = await PostService.list({
+            topic_id: postData.topic_id,
+            type: "post",
+            limit: 5,
+            sort_by: "created_at",
+            sort_order: "desc",
+          });
+
+          const filtered = relatedRes.data.data.filter(
+            (p) => p.id !== postData.id
+          );
+
+          setRecommended(filtered.slice(0, 4));
+        }
+      } catch (err) {
+        console.error(err);
       } finally {
         setLoading(false);
       }
     };
-    fetchPostAndGallery();
+
+    fetchData();
   }, [params?.postSlug]);
 
-  if (loading) return (
-    <div className="min-h-screen flex items-center justify-center bg-white">
-      <div className="w-6 h-6 border-2 border-slate-200 border-t-slate-800 rounded-full animate-spin"></div>
-    </div>
-  );
+  if (loading)
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="w-6 h-6 border-2 border-slate-200 border-t-slate-800 rounded-full animate-spin"></div>
+      </div>
+    );
 
   if (!post) return null;
 
   return (
-    <div className="bg-white text-slate-900 antialiased">
-      {/* 1. TOP NAV - Tối giản */}
-      <nav className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-slate-100">
-        <div className="max-w-4xl mx-auto px-6 h-16 flex items-center justify-between">
-          <button 
+    <div className="bg-white text-slate-900">
+      {/* NAV */}
+      <nav className="sticky top-0 z-50 bg-white/80 backdrop-blur border-b">
+        <div className="max-w-4xl mx-auto px-6 h-16 flex justify-between items-center">
+          <button
             onClick={() => router.back()}
-            className="group flex items-center gap-1 text-sm font-medium text-slate-500 hover:text-slate-900 transition-colors"
+            className="flex items-center gap-1 text-sm text-slate-500 hover:text-slate-900"
           >
-            <ChevronLeft size={18} className="group-hover:-translate-x-1 transition-transform" />
-            Quay lại
+            <ChevronLeft size={18} /> Quay lại
           </button>
-          <div className="flex items-center gap-4">
-            <button className="text-slate-400 hover:text-slate-900 transition-colors"><Share2 size={18}/></button>
-          </div>
+          <Share2 size={18} className="text-slate-400" />
         </div>
       </nav>
 
-      {/* 2. HEADER - Tập trung vào tiêu đề */}
+      {/* HEADER */}
       <header className="max-w-3xl mx-auto px-6 pt-16 pb-12">
         {post.topic && (
-          <span className="text-blue-600 font-bold text-xs uppercase tracking-widest mb-4 block">
+          <span className="text-blue-600 text-xs font-bold uppercase">
             {post.topic.name}
           </span>
         )}
-        <h1 className="text-4xl md:text-5xl font-extrabold text-slate-900 leading-tight mb-8 tracking-tight">
+        <h1 className="text-4xl md:text-5xl font-extrabold mt-4 mb-8">
           {post.title}
         </h1>
-        
-        <div className="flex items-center justify-between border-y border-slate-100 py-6">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center font-bold text-slate-600 text-sm">
-              {post.user?.name?.charAt(0) || "A"}
-            </div>
-            <div>
-              <p className="text-sm font-bold text-slate-900">{post.user?.name || "Tác giả"}</p>
-              <p className="text-xs text-slate-400">{formatDate(post.created_at)}</p>
-            </div>
+
+        <div className="flex justify-between border-y py-6">
+          <div>
+            <p className="font-bold">{post.user?.name || "Tác giả"}</p>
+            <p className="text-xs text-slate-400">
+              {formatDate(post.created_at)}
+            </p>
           </div>
-          <div className="flex items-center gap-6 text-slate-400">
-            <div className="flex items-center gap-1.5 text-xs font-medium">
-              <Eye size={14} /> {post.views?.toLocaleString()}
-            </div>
-            <div className="flex items-center gap-1.5 text-xs font-medium">
+          <div className="flex gap-6 text-slate-400 text-xs">
+            <span className="flex items-center gap-1">
+              <Eye size={14} /> {post.views}
+            </span>
+            <span className="flex items-center gap-1">
               <Clock size={14} /> 5 phút đọc
-            </div>
+            </span>
           </div>
         </div>
       </header>
 
-      {/* 3. FEATURED IMAGE - To, sắc nét */}
+      {/* IMAGE */}
       <div className="max-w-5xl mx-auto px-6 mb-16">
         <img
           src={getImageUrl(post.image)}
-          alt={post.title}
-          className="w-full aspect-[16/9] object-cover rounded-2xl shadow-sm bg-slate-100"
+          className="w-full aspect-[16/9] object-cover rounded-2xl"
         />
       </div>
 
-      {/* 4. CONTENT - Typography tinh tế */}
+      {/* CONTENT */}
       <main className="max-w-3xl mx-auto px-6">
-        <article 
-          className="prose prose-slate prose-lg max-w-none
-            prose-p:text-slate-700 prose-p:leading-relaxed
-            prose-headings:text-slate-900 prose-headings:font-bold
-            prose-strong:text-slate-900
-            prose-img:rounded-xl prose-img:shadow-sm"
+        <article
+          className="prose prose-lg max-w-none"
           dangerouslySetInnerHTML={{ __html: post.content }}
         />
 
-        {/* 5. GALLERY - Lưới đều đặn, tối giản */}
+        {/* GALLERY */}
         {gallery.length > 0 && (
           <div className="mt-20">
-            <h3 className="text-lg font-bold mb-8 flex items-center gap-3">
-              Hình ảnh liên quan
-              <span className="flex-1 h-px bg-slate-100"></span>
-            </h3>
+            <h3 className="font-bold mb-6">Hình ảnh liên quan</h3>
             <div className="grid grid-cols-2 gap-4">
               {gallery.map((img) => (
-                <div key={img.id} className="aspect-square overflow-hidden rounded-xl bg-slate-100">
-                  <img 
-                    src={getImageUrl(img.image)} 
-                    className="w-full h-full object-cover hover:scale-105 transition-transform duration-500 cursor-zoom-in" 
-                    alt="Gallery visual" 
-                  />
-                </div>
+                <img
+                  key={img.id}
+                  src={getImageUrl(img.image)}
+                  className="rounded-xl object-cover aspect-square"
+                />
               ))}
             </div>
           </div>
         )}
 
-        {/* 6. FOOTER - Gọn gàng */}
-        <footer className="mt-24 mb-32 pt-12 border-t border-slate-100 text-center">
-          <p className="text-slate-400 text-sm mb-8 italic">
-            Cảm ơn bạn đã dành thời gian đọc bài viết này.
-          </p>
+        {/* 🔥 RECOMMENDED POSTS */}
+        {recommended.length > 0 && (
+          <section className="mt-24">
+            <h3 className="text-xl font-extrabold mb-8">
+              Tin tức đề xuất
+            </h3>
+
+            <div className="grid md:grid-cols-2 gap-6">
+              {recommended.map((item) => (
+                <article
+                  key={item.id}
+                  onClick={() => router.push(`/posts/${item.slug}`)}
+                  className="group cursor-pointer rounded-2xl overflow-hidden border hover:shadow-lg transition"
+                >
+                  <img
+                    src={getImageUrl(item.image)}
+                    className="w-full h-48 object-cover group-hover:scale-105 transition"
+                  />
+                  <div className="p-5">
+                    <h4 className="font-bold line-clamp-2">
+                      {item.title}
+                    </h4>
+                    <p className="text-sm text-slate-500 mt-2 line-clamp-2">
+                      {item.excerpt}
+                    </p>
+                  </div>
+                </article>
+              ))}
+            </div>
+          </section>
+        )}
+
+        {/* FOOTER */}
+        <footer className="mt-32 mb-24 text-center">
           <button
-            onClick={() => router.push('/blog')}
-            className="inline-flex items-center gap-2 px-8 py-3 bg-slate-900 text-white rounded-full text-sm font-bold hover:bg-slate-800 transition-all shadow-lg shadow-slate-200"
+            onClick={() => router.push("/blog")}
+            className="px-8 py-3 bg-slate-900 text-white rounded-full"
           >
-            Xem các bài viết khác
+            Xem thêm bài viết
           </button>
         </footer>
       </main>

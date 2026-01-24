@@ -16,12 +16,48 @@ class ImportController extends Controller
     {
         $query = Import::with('user');
 
-        // Phân trang
-        $limit = (int) $request->get('limit', 10);
-        $page  = (int) $request->get('page', 1);
-        $offset = ($page - 1) * $limit;
-        $total = $query->count();
+        /* ================= FILTER ================= */
 
+        // Lọc theo user
+        if ($request->filled('user_id')) {
+            $query->where('user_id', $request->user_id);
+        }
+
+        // Search theo note hoặc tên user
+        if ($request->filled('keyword')) {
+            $keyword = $request->keyword;
+
+            $query->where(function ($q) use ($keyword) {
+                $q->where('note', 'like', "%$keyword%")
+                    ->orWhereHas('user', function ($u) use ($keyword) {
+                        $u->where('name', 'like', "%$keyword%");
+                    });
+            });
+        }
+
+        // Lọc theo ngày tạo
+        if ($request->filled('from_date')) {
+            $query->whereDate('created_at', '>=', $request->from_date);
+        }
+
+        if ($request->filled('to_date')) {
+            $query->whereDate('created_at', '<=', $request->to_date);
+        }
+
+        /* ================= SORT ================= */
+
+        $sortBy = $request->get('sort_by', 'created_at'); // created_at | id
+        $sortOrder = $request->get('sort_order', 'desc'); // asc | desc
+
+        $query->orderBy($sortBy, $sortOrder);
+
+        /* ================= PAGINATION ================= */
+
+        $limit = (int) $request->get('limit', 10);
+        $page = (int) $request->get('page', 1);
+        $offset = ($page - 1) * $limit;
+
+        $total = $query->count();
         $data = $query->offset($offset)->limit($limit)->get();
 
         return response()->json([
@@ -32,6 +68,7 @@ class ImportController extends Controller
             'data' => $data
         ]);
     }
+
 
     /**
      * Thêm import mới

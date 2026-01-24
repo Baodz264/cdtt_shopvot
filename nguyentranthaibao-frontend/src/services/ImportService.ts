@@ -1,6 +1,8 @@
 // services/ImportService.ts
 import api from "./api";
 
+/* ================= INTERFACES ================= */
+
 export interface Import {
   id: number;
   user_id?: number | null;
@@ -22,32 +24,55 @@ export interface PaginatedImport {
   data: Import[];
 }
 
+/* ===== Params đúng với ImportController@index ===== */
+export interface ImportListParams {
+  user_id?: number;
+  keyword?: string;
+  from_date?: string; // YYYY-MM-DD
+  to_date?: string;   // YYYY-MM-DD
+  sort_by?: "created_at" | "id";
+  sort_order?: "asc" | "desc";
+  page?: number;
+  limit?: number;
+}
+
+/* ================= SERVICE ================= */
+
 const ImportService = {
-  // Lấy danh sách import có phân trang
-  async list(params?: { page?: number; limit?: number }): Promise<PaginatedImport> {
+  /* ========== LIST ========== */
+  async list(params?: ImportListParams): Promise<PaginatedImport> {
     const response = await api.get("/imports", { params });
     return response.data;
   },
 
-  // Lấy chi tiết một import
+  /* ========== DETAIL ========== */
   async get(id: number): Promise<Import> {
     const response = await api.get(`/imports/${id}`);
     return response.data;
   },
 
-  // Tạo mới import
-  async create(data: { user_id?: number; note?: string }): Promise<Import> {
+  /* ========== CREATE ========== */
+  async create(data: {
+    user_id?: number;
+    note?: string;
+  }): Promise<Import> {
     const response = await api.post("/imports", data);
     return response.data;
   },
 
-  // Cập nhật import
-  async update(id: number, data: { user_id?: number; note?: string }): Promise<Import> {
+  /* ========== UPDATE ========== */
+  async update(
+    id: number,
+    data: {
+      user_id?: number;
+      note?: string;
+    }
+  ): Promise<Import> {
     const response = await api.put(`/imports/${id}`, data);
     return response.data;
   },
 
-  // Xóa import
+  /* ========== DELETE ========== */
   async delete(id: number): Promise<{ message: string }> {
     const response = await api.delete(`/imports/${id}`);
     return response.data;

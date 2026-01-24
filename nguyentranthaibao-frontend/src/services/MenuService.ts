@@ -1,4 +1,3 @@
-// services/MenuService.ts
 import api from "./api";
 
 export interface Menu {
@@ -37,38 +36,48 @@ export interface MenuCreateRequest {
   status?: number;
 }
 
+export interface MenuListParams {
+  page?: number;
+  limit?: number;
+  search?: string;
+
+  status?: number;
+  type?: "category" | "topic" | "post" | "custom";
+  position?: string;
+  parent_id?: number;
+
+  from_date?: string;
+  to_date?: string;
+
+  sort_by?: "id" | "name" | "created_at";
+  sort_order?: "asc" | "desc";
+}
+
 export interface ApiResponseMessage {
   status: boolean;
   message: string;
 }
 
 const MenuService = {
-  // Lấy danh sách
-  async list(
-    params?: Partial<{
-      page: number;
-      limit: number;
-      search: string;
-      status: number;
-    }>
-  ): Promise<MenuListResponse> {
+  // ================= LIST =================
+  async list(params?: MenuListParams): Promise<MenuListResponse> {
     const response = await api.get<MenuListResponse>("/menus", { params });
     return response.data;
   },
 
-  // Chi tiết
+  // ================= DETAIL =================
   async detail(id: number): Promise<MenuDetailResponse> {
     const response = await api.get<MenuDetailResponse>(`/menus/${id}`);
     return response.data;
   },
 
-  // Thêm menu
+  // ================= CREATE =================
   async create(data: MenuCreateRequest): Promise<MenuDetailResponse> {
-    const response = await api.post<MenuDetailResponse>("menus", data);
+    const response = await api.post<MenuDetailResponse>("/menus", data);
     return response.data;
   },
 
-  // Cập nhật menu
+  // ================= UPDATE =================
   async update(
     id: number,
     data: Partial<MenuCreateRequest>
@@ -77,7 +86,7 @@ const MenuService = {
     return response.data;
   },
 
-  // Xóa menu
+  // ================= DELETE =================
   async delete(id: number): Promise<ApiResponseMessage> {
     const response = await api.delete<ApiResponseMessage>(`/menus/${id}`);
     return response.data;

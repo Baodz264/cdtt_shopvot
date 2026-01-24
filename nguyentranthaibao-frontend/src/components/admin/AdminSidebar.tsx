@@ -46,6 +46,7 @@ const menu = [
     title: "Nội dung",
     icon: FileText,
     children: [
+      { title: "Banner", href: "/admin/banners" },
       { title: "Chủ đề", href: "/admin/topics" },
       { title: "Bài viết", href: "/admin/posts" },
     ],
@@ -65,6 +66,7 @@ const menu = [
     children: [
       { title: "Liên hệ", href: "/admin/contacts" },
       { title: "Cài đặt", href: "/admin/settings" },
+      { title: "Menu", href: "/admin/menu" },
     ],
   },
 ];

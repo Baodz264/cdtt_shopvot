@@ -11,6 +11,9 @@ import {
   Image,
   message,
   Pagination,
+  Input,
+  Select,
+  DatePicker,
 } from "antd";
 import {
   EyeOutlined,
@@ -25,27 +28,41 @@ import BannerService, {
   PaginatedBanners,
 } from "@/services/BannerService";
 
+const { RangePicker } = DatePicker;
 const IMAGE_BASE = "http://localhost:8000";
 
 export default function BannerList() {
   const router = useRouter();
 
+  /* ================= STATE ================= */
   const [banners, setBanners] = useState<Banner[]>([]);
   const [loading, setLoading] = useState(false);
 
+  // Pagination
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(5);
   const [total, setTotal] = useState(0);
 
-  // =============================
-  // Fetch banners
-  // =============================
+  // Filter
+  const [search, setSearch] = useState("");
+  const [status, setStatus] = useState<0 | 1 | undefined>(undefined);
+  const [position, setPosition] = useState<string | undefined>(undefined);
+  const [fromDate, setFromDate] = useState<string | undefined>(undefined);
+  const [toDate, setToDate] = useState<string | undefined>(undefined);
+
+  /* ================= FETCH ================= */
   const fetchBanners = async (page = 1, limit = pageSize) => {
     try {
       setLoading(true);
+
       const res: PaginatedBanners = await BannerService.list({
         page,
         limit,
+        search: search || undefined,
+        status,
+        position,
+        from_date: fromDate,
+        to_date: toDate,
       });
 
       setBanners(res.data);
@@ -62,11 +79,10 @@ export default function BannerList() {
 
   useEffect(() => {
     fetchBanners(1, pageSize);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // =============================
-  // Toggle status
-  // =============================
+  /* ================= ACTIONS ================= */
   const toggleStatus = async (banner: Banner) => {
     try {
       await BannerService.update(banner.id, {
@@ -79,9 +95,6 @@ export default function BannerList() {
     }
   };
 
-  // =============================
-  // Delete banner
-  // =============================
   const handleDelete = async (id: number) => {
     try {
       await BannerService.delete(id);
@@ -97,9 +110,7 @@ export default function BannerList() {
     }
   };
 
-  // =============================
-  // Columns
-  // =============================
+  /* ================= COLUMNS ================= */
   const columns = [
     {
       title: "Ảnh",
@@ -193,11 +204,10 @@ export default function BannerList() {
     },
   ];
 
-  // =============================
-  // Render
-  // =============================
+  /* ================= RENDER ================= */
   return (
     <div className="p-6 bg-white rounded-lg shadow-sm">
+      {/* HEADER */}
       <div className="flex justify-between items-center mb-4">
         <h2 className="text-xl font-bold">Danh sách Banner</h2>
         <Button
@@ -210,6 +220,66 @@ export default function BannerList() {
         </Button>
       </div>
 
+      {/* FILTER */}
+      <div className="mb-4 grid grid-cols-1 md:grid-cols-5 gap-3">
+        <Input
+          placeholder="Tìm theo tên banner..."
+          allowClear
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+        />
+
+        <Select
+          placeholder="Trạng thái"
+          allowClear
+          value={status}
+          onChange={(value) => setStatus(value)}
+          options={[
+            { label: "Hiển thị", value: 1 },
+            { label: "Ẩn", value: 0 },
+          ]}
+        />
+
+        <Select
+          placeholder="Vị trí"
+          allowClear
+          value={position}
+          onChange={(value) => setPosition(value)}
+          options={[
+            { label: "Homepage", value: "homepage" },
+            { label: "Sidebar", value: "sidebar" },
+            { label: "Popup", value: "popup" },
+          ]}
+        />
+
+        <RangePicker
+          format="YYYY-MM-DD"
+          onChange={(dates) => {
+            setFromDate(dates?.[0]?.format("YYYY-MM-DD"));
+            setToDate(dates?.[1]?.format("YYYY-MM-DD"));
+          }}
+        />
+
+        <Space>
+          <Button type="primary" onClick={() => fetchBanners(1, pageSize)}>
+            Lọc
+          </Button>
+          <Button
+            onClick={() => {
+              setSearch("");
+              setStatus(undefined);
+              setPosition(undefined);
+              setFromDate(undefined);
+              setToDate(undefined);
+              fetchBanners(1, pageSize);
+            }}
+          >
+            Reset
+          </Button>
+        </Space>
+      </div>
+
+      {/* TABLE */}
       <Table
         size="small"
         bordered
@@ -220,6 +290,7 @@ export default function BannerList() {
         pagination={false}
       />
 
+      {/* PAGINATION */}
       <div className="flex justify-end mt-4">
         <Pagination
           current={currentPage}

@@ -1,26 +1,61 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Table, Tag, Button, Space, message, Pagination } from "antd";
+import {
+  Table,
+  Tag,
+  Button,
+  Space,
+  message,
+  Pagination,
+  Input,
+  Select,
+  Row,
+  Col,
+  Card,
+} from "antd";
 import type { ColumnsType } from "antd/es/table";
 import Link from "next/link";
-import OrderService, { Order } from "@/services/OrderService";
+import OrderService, {
+  Order,
+  OrderStatus,
+  PaymentMethod,
+  PaymentStatus,
+} from "@/services/OrderService";
+
+const { Search } = Input;
 
 export default function OrdersPage() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(false);
+
+  /* ================= PAGINATION ================= */
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(5);
   const [total, setTotal] = useState(0);
 
-  // Fetch orders từ API
-  const fetchOrders = async (page = 1, limit = pageSize) => {
+  /* ================= FILTER ================= */
+  const [keyword, setKeyword] = useState<string>();
+  const [status, setStatus] = useState<OrderStatus>();
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>();
+  const [paymentStatus, setPaymentStatus] = useState<PaymentStatus>();
+
+  /* ================= FETCH ================= */
+  const fetchOrders = async () => {
     try {
       setLoading(true);
-      const data = await OrderService.list({ page, limit });
+      const data = await OrderService.list({
+        page: currentPage,
+        limit: pageSize,
+        keyword,
+        status,
+        payment_method: paymentMethod,
+        payment_status: paymentStatus,
+        sort_by: "created_at",
+        sort_order: "desc",
+      });
+
       setOrders(data.data);
-      setCurrentPage(data.page);
-      setPageSize(data.limit);
       setTotal(data.total);
     } catch (error) {
       console.error(error);
@@ -30,11 +65,24 @@ export default function OrdersPage() {
     }
   };
 
+  /**
+   * 🔥 CHỈ GỌI API Ở ĐÂY
+   * Khi bất kỳ state nào thay đổi
+   */
   useEffect(() => {
-    fetchOrders(1, pageSize);
-  }, []);
+    fetchOrders();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    currentPage,
+    pageSize,
+    keyword,
+    status,
+    paymentMethod,
+    paymentStatus,
+  ]);
 
-  const statusColor = (status: Order["status"]) => {
+  /* ================= UI HELPERS ================= */
+  const statusColor = (status: OrderStatus) => {
     switch (status) {
       case "pending":
         return "orange";
@@ -51,88 +99,151 @@ export default function OrdersPage() {
     }
   };
 
+  /* ================= TABLE ================= */
   const columns: ColumnsType<Order> = [
     {
       title: "Mã đơn",
       dataIndex: "id",
-      key: "id",
       align: "center",
+      width: 90,
     },
     {
       title: "Khách hàng",
       dataIndex: "fullname",
-      key: "fullname",
     },
     {
       title: "Tổng tiền",
       dataIndex: "total_money",
-      key: "total_money",
       align: "right",
-      render: (amount: number) => (amount ? amount.toLocaleString() + "₫" : "-"),
+      render: (v: number) =>
+        v ? v.toLocaleString("vi-VN") + "₫" : "-",
     },
     {
       title: "Trạng thái",
       dataIndex: "status",
-      key: "status",
       align: "center",
-      render: (status: Order["status"]) => (
-        <Tag color={statusColor(status)}>{status.toUpperCase()}</Tag>
+      render: (s: OrderStatus) => (
+        <Tag color={statusColor(s)}>{s.toUpperCase()}</Tag>
       ),
     },
     {
       title: "Thanh toán",
       dataIndex: "payment_method",
-      key: "payment_method",
       align: "center",
+      render: (v) => v?.toUpperCase(),
     },
     {
       title: "Ngày tạo",
       dataIndex: "created_at",
-      key: "created_at",
       align: "center",
     },
     {
       title: "Hành động",
-      key: "action",
       align: "center",
       render: (_, record) => (
-        <Space size="middle">
-          <Link href={`/admin/orders/${record.id}/show`}>
-            <Button type="link" size="small">
-              Xem
-            </Button>
-          </Link>
-        </Space>
+        <Link href={`/admin/orders/${record.id}/show`}>
+          <Button type="link" size="small">
+            Xem
+          </Button>
+        </Link>
       ),
     },
   ];
 
+  /* ================= RENDER ================= */
   return (
     <div className="p-6 bg-white rounded-lg shadow-sm">
-      <h1 className="text-2xl font-bold mb-6">Danh sách đơn hàng</h1>
+      <h1 className="text-2xl font-bold mb-4">Danh sách đơn hàng</h1>
 
+      {/* ================= FILTER ================= */}
+      <Card className="mb-4">
+        <Row gutter={[16, 16]}>
+          <Col xs={24} md={8}>
+            <Search
+              placeholder="Tìm theo tên / SĐT"
+              allowClear
+              onSearch={(value) => {
+                setCurrentPage(1);
+                setKeyword(value || undefined);
+              }}
+            />
+          </Col>
+
+          <Col xs={24} md={5}>
+            <Select
+              allowClear
+              placeholder="Trạng thái"
+              className="w-full"
+              onChange={(v) => {
+                setCurrentPage(1);
+                setStatus(v);
+              }}
+            >
+              <Select.Option value="pending">Pending</Select.Option>
+              <Select.Option value="confirmed">Confirmed</Select.Option>
+              <Select.Option value="shipping">Shipping</Select.Option>
+              <Select.Option value="completed">Completed</Select.Option>
+              <Select.Option value="cancelled">Cancelled</Select.Option>
+            </Select>
+          </Col>
+
+          <Col xs={24} md={5}>
+            <Select
+              allowClear
+              placeholder="Phương thức"
+              className="w-full"
+              onChange={(v) => {
+                setCurrentPage(1);
+                setPaymentMethod(v);
+              }}
+            >
+              <Select.Option value="cod">COD</Select.Option>
+              <Select.Option value="momo">MOMO</Select.Option>
+              <Select.Option value="vnpay">VNPAY</Select.Option>
+              <Select.Option value="paypal">PAYPAL</Select.Option>
+            </Select>
+          </Col>
+
+          <Col xs={24} md={6}>
+            <Select
+              allowClear
+              placeholder="Thanh toán"
+              className="w-full"
+              onChange={(v) => {
+                setCurrentPage(1);
+                setPaymentStatus(v);
+              }}
+            >
+              <Select.Option value="unpaid">Chưa thanh toán</Select.Option>
+              <Select.Option value="paid">Đã thanh toán</Select.Option>
+              <Select.Option value="refunded">Hoàn tiền</Select.Option>
+            </Select>
+          </Col>
+        </Row>
+      </Card>
+
+      {/* ================= TABLE ================= */}
       <Table
         rowKey="id"
         columns={columns}
         dataSource={orders}
         loading={loading}
         bordered
-        pagination={false} // pagination dùng Ant Design Pagination bên dưới
+        pagination={false}
       />
 
+      {/* ================= PAGINATION ================= */}
       <div className="flex justify-end mt-4">
         <Pagination
           current={currentPage}
           pageSize={pageSize}
           total={total}
           showSizeChanger
-          showQuickJumper
           pageSizeOptions={["5", "10", "20", "50"]}
-          onChange={(page, size) => fetchOrders(page, size)}
-          onShowSizeChange={(current, size) => fetchOrders(1, size)}
-          showTotal={(total, range) =>
-            `${range[0]}-${range[1]} trên ${total} đơn hàng`
-          }
+          onChange={(page, size) => {
+            setCurrentPage(page);
+            setPageSize(size);
+          }}
         />
       </div>
     </div>

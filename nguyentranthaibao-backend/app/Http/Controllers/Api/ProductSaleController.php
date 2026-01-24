@@ -16,7 +16,8 @@ class ProductSaleController extends Controller
     {
         $query = ProductSale::with('product');
 
-        // Search theo tên sản phẩm
+        /* ================= SEARCH ================= */
+
         if ($request->filled('search')) {
             $search = $request->search;
             $query->whereHas('product', function ($q) use ($search) {
@@ -24,7 +25,9 @@ class ProductSaleController extends Controller
             });
         }
 
-        // Filter theo trạng thái
+        /* ================= FILTER ================= */
+
+        // Trạng thái bật / tắt
         if ($request->filled('status')) {
             $query->where('status', $request->status);
         }
@@ -34,12 +37,58 @@ class ProductSaleController extends Controller
             $query->active();
         }
 
+        // Lọc theo giá gốc
+        if ($request->filled('min_original_price')) {
+            $query->where('original_price', '>=', $request->min_original_price);
+        }
+
+        if ($request->filled('max_original_price')) {
+            $query->where('original_price', '<=', $request->max_original_price);
+        }
+
+        // Lọc theo giá sale
+        if ($request->filled('min_sale_price')) {
+            $query->where('sale_price', '>=', $request->min_sale_price);
+        }
+
+        if ($request->filled('max_sale_price')) {
+            $query->where('sale_price', '<=', $request->max_sale_price);
+        }
+
+        // Lọc theo % giảm
+        if ($request->filled('min_percent')) {
+            $query->where('sale_percent', '>=', $request->min_percent);
+        }
+
+        if ($request->filled('max_percent')) {
+            $query->where('sale_percent', '<=', $request->max_percent);
+        }
+
+        // Lọc theo thời gian sale
+        if ($request->filled('from_date')) {
+            $query->whereDate('start_date', '>=', $request->from_date);
+        }
+
+        if ($request->filled('to_date')) {
+            $query->whereDate('end_date', '<=', $request->to_date);
+        }
+
+        /* ================= SORT ================= */
+
+        $sortBy = $request->get('sort_by', 'id'); // id | sale_price | sale_percent | created_at
+        $sortOrder = $request->get('sort_order', 'desc'); // asc | desc
+
+        $query->orderBy($sortBy, $sortOrder);
+
+        /* ================= PAGINATION ================= */
+
         $limit = (int) $request->get('limit', 10);
 
         return response()->json(
-            $query->orderByDesc('id')->paginate($limit)
+            $query->paginate($limit)
         );
     }
+
 
     /**
      * Chi tiết sản phẩm sale
@@ -56,12 +105,12 @@ class ProductSaleController extends Controller
     public function store(Request $request)
     {
         $validator = Validator::make($request->all(), [
-            'product_id'     => 'required|exists:product,id|unique:product_sale,product_id',
+            'product_id' => 'required|exists:product,id|unique:product_sale,product_id',
             'original_price' => 'required|numeric|min:0',
-            'sale_price'     => 'required|numeric|min:0|lt:original_price',
-            'start_date'     => 'nullable|date',
-            'end_date'       => 'nullable|date|after_or_equal:start_date',
-            'status'         => 'boolean',
+            'sale_price' => 'required|numeric|min:0|lt:original_price',
+            'start_date' => 'nullable|date',
+            'end_date' => 'nullable|date|after_or_equal:start_date',
+            'status' => 'boolean',
         ]);
 
         if ($validator->fails()) {
@@ -73,18 +122,18 @@ class ProductSaleController extends Controller
         );
 
         $sale = ProductSale::create([
-            'product_id'     => $request->product_id,
+            'product_id' => $request->product_id,
             'original_price' => $request->original_price,
-            'sale_price'     => $request->sale_price,
-            'sale_percent'   => $salePercent,
-            'start_date'     => $request->start_date,
-            'end_date'       => $request->end_date,
-            'status'         => $request->status ?? true,
+            'sale_price' => $request->sale_price,
+            'sale_percent' => $salePercent,
+            'start_date' => $request->start_date,
+            'end_date' => $request->end_date,
+            'status' => $request->status ?? true,
         ]);
 
         return response()->json([
             'message' => 'Product sale created successfully',
-            'data'    => $sale
+            'data' => $sale
         ], 201);
     }
 
@@ -96,12 +145,12 @@ class ProductSaleController extends Controller
         $sale = ProductSale::findOrFail($id);
 
         $validator = Validator::make($request->all(), [
-            'product_id'     => 'sometimes|exists:product,id|unique:product_sale,product_id,' . $sale->id,
+            'product_id' => 'sometimes|exists:product,id|unique:product_sale,product_id,' . $sale->id,
             'original_price' => 'sometimes|numeric|min:0',
-            'sale_price'     => 'sometimes|numeric|min:0',
-            'start_date'     => 'nullable|date',
-            'end_date'       => 'nullable|date|after_or_equal:start_date',
-            'status'         => 'boolean',
+            'sale_price' => 'sometimes|numeric|min:0',
+            'start_date' => 'nullable|date',
+            'end_date' => 'nullable|date|after_or_equal:start_date',
+            'status' => 'boolean',
         ]);
 
         if ($validator->fails()) {
@@ -128,7 +177,7 @@ class ProductSaleController extends Controller
 
         return response()->json([
             'message' => 'Product sale updated successfully',
-            'data'    => $sale
+            'data' => $sale
         ]);
     }
 

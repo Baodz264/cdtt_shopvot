@@ -16,15 +16,47 @@ class ContactController extends Controller
     {
         $query = Contact::query();
 
+        /* ================= SEARCH ================= */
+
+        if ($request->filled('keyword')) {
+            $keyword = $request->keyword;
+            $query->where(function ($q) use ($keyword) {
+                $q->where('fullname', 'like', "%$keyword%")
+                    ->orWhere('email', 'like', "%$keyword%")
+                    ->orWhere('phone', 'like', "%$keyword%")
+                    ->orWhere('message', 'like', "%$keyword%");
+            });
+        }
+
+        /* ================= FILTER ================= */
+
         if ($request->filled('status')) {
             $query->where('status', $request->status);
         }
 
-        $limit = (int) $request->get('limit', 10);
-        $page  = (int) $request->get('page', 1);
-        $offset = ($page - 1) * $limit;
-        $total = $query->count();
+        // Lọc theo ngày gửi
+        if ($request->filled('from_date')) {
+            $query->whereDate('created_at', '>=', $request->from_date);
+        }
 
+        if ($request->filled('to_date')) {
+            $query->whereDate('created_at', '<=', $request->to_date);
+        }
+
+        /* ================= SORT ================= */
+
+        $sortBy = $request->get('sort_by', 'created_at');   // created_at | fullname
+        $sortOrder = $request->get('sort_order', 'desc');  // asc | desc
+
+        $query->orderBy($sortBy, $sortOrder);
+
+        /* ================= PAGINATION ================= */
+
+        $limit = (int) $request->get('limit', 10);
+        $page = (int) $request->get('page', 1);
+        $offset = ($page - 1) * $limit;
+
+        $total = $query->count();
         $data = $query->offset($offset)->limit($limit)->get();
 
         return response()->json([
@@ -35,6 +67,7 @@ class ContactController extends Controller
             'data' => $data
         ]);
     }
+
 
     /**
      * Chi tiết contact
@@ -51,24 +84,24 @@ class ContactController extends Controller
     {
         $validator = Validator::make($request->all(), [
             'fullname' => 'required|string|max:150',
-            'email'    => 'nullable|email|max:150',
-            'phone'    => 'nullable|string|max:20',
-            'message'  => 'required|string',
-            'reply'    => 'nullable|string',
-            'status'   => 'nullable|integer|in:0,1'
+            'email' => 'nullable|email|max:150',
+            'phone' => 'nullable|string|max:20',
+            'message' => 'required|string',
+            'reply' => 'nullable|string',
+            'status' => 'nullable|integer|in:0,1'
         ]);
 
         if ($validator->fails()) {
-            return response()->json(['errors'=>$validator->errors()],422);
+            return response()->json(['errors' => $validator->errors()], 422);
         }
 
         $contact = Contact::create([
             'fullname' => $request->fullname,
-            'email'    => $request->email,
-            'phone'    => $request->phone,
-            'message'  => $request->message,
-            'reply'    => $request->reply,
-            'status'   => $request->status ?? 0
+            'email' => $request->email,
+            'phone' => $request->phone,
+            'message' => $request->message,
+            'reply' => $request->reply,
+            'status' => $request->status ?? 0
         ]);
 
         return response()->json($contact, 201);
@@ -81,18 +114,18 @@ class ContactController extends Controller
     {
         $validator = Validator::make($request->all(), [
             'fullname' => 'sometimes|required|string|max:150',
-            'email'    => 'sometimes|nullable|email|max:150',
-            'phone'    => 'sometimes|nullable|string|max:20',
-            'message'  => 'sometimes|required|string',
-            'reply'    => 'sometimes|nullable|string',
-            'status'   => 'sometimes|required|integer|in:0,1'
+            'email' => 'sometimes|nullable|email|max:150',
+            'phone' => 'sometimes|nullable|string|max:20',
+            'message' => 'sometimes|required|string',
+            'reply' => 'sometimes|nullable|string',
+            'status' => 'sometimes|required|integer|in:0,1'
         ]);
 
-        if($validator->fails()){
-            return response()->json(['errors'=>$validator->errors()],422);
+        if ($validator->fails()) {
+            return response()->json(['errors' => $validator->errors()], 422);
         }
 
-        $contact->update($request->only(['fullname','email','phone','message','reply','status']));
+        $contact->update($request->only(['fullname', 'email', 'phone', 'message', 'reply', 'status']));
 
         return response()->json($contact);
     }
@@ -103,6 +136,6 @@ class ContactController extends Controller
     public function destroy(Contact $contact)
     {
         $contact->delete();
-        return response()->json(['message'=>'Contact deleted successfully']);
+        return response()->json(['message' => 'Contact deleted successfully']);
     }
 }

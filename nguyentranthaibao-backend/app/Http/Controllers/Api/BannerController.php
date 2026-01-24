@@ -17,26 +17,54 @@ class BannerController extends Controller
     {
         $query = Banner::query();
 
-        // Search theo name hoặc position
+        /* ================= SEARCH ================= */
+
         if ($request->filled('search')) {
             $search = $request->search;
-            $query->where(function($q) use ($search) {
+            $query->where(function ($q) use ($search) {
                 $q->where('name', 'like', "%$search%")
-                  ->orWhere('position', 'like', "%$search%");
+                    ->orWhere('position', 'like', "%$search%");
             });
         }
 
-        // Filter theo status nếu có
+        /* ================= FILTER ================= */
+
+        // Filter status
         if ($request->filled('status')) {
             $query->where('status', $request->status);
         }
 
+        // Filter position
+        if ($request->filled('position')) {
+            $query->where('position', $request->position);
+        }
+
+        // Filter theo ngày tạo
+        if ($request->filled('from_date')) {
+            $query->whereDate('created_at', '>=', $request->from_date);
+        }
+
+        if ($request->filled('to_date')) {
+            $query->whereDate('created_at', '<=', $request->to_date);
+        }
+
+        /* ================= SORT ================= */
+
+        $sortBy = $request->get('sort_by', 'id');        // id | name | created_at
+        $sortOrder = $request->get('sort_order', 'desc'); // asc | desc
+        $query->orderBy($sortBy, $sortOrder);
+
+        /* ================= PAGINATION ================= */
+
         $limit = (int) $request->get('limit', 10);
-        $page  = (int) $request->get('page', 1);
-        $offset = ($page - 1) * $limit;
+        $page = (int) $request->get('page', 1);
 
         $total = $query->count();
-        $data  = $query->offset($offset)->limit($limit)->get();
+
+        $data = $query
+            ->skip(($page - 1) * $limit)
+            ->take($limit)
+            ->get();
 
         return response()->json([
             'page' => $page,
@@ -46,6 +74,7 @@ class BannerController extends Controller
             'data' => $data,
         ]);
     }
+
 
     /**
      * Chi tiết một banner
@@ -61,18 +90,18 @@ class BannerController extends Controller
     public function store(Request $request)
     {
         $validator = Validator::make($request->all(), [
-            'name'     => 'required|string|max:150',
-            'link'     => 'nullable|string',
-            'image'    => 'required|image|mimes:jpeg,png,jpg,gif|max:4096',
+            'name' => 'required|string|max:150',
+            'link' => 'nullable|string',
+            'image' => 'required|image|mimes:jpeg,png,jpg,gif|max:4096',
             'position' => 'required|string|max:50',
-            'status'   => 'nullable|integer|in:0,1',
+            'status' => 'nullable|integer|in:0,1',
         ]);
 
         if ($validator->fails()) {
             return response()->json(['errors' => $validator->errors()], 422);
         }
 
-        $data = $request->only(['name','link','position','status']);
+        $data = $request->only(['name', 'link', 'position', 'status']);
 
         // Upload ảnh
         $data['image'] = $this->uploadLocal($request->file('image'));
@@ -88,18 +117,18 @@ class BannerController extends Controller
     public function update(Request $request, Banner $banner)
     {
         $validator = Validator::make($request->all(), [
-            'name'     => 'sometimes|required|string|max:150',
-            'link'     => 'sometimes|nullable|string',
-            'image'    => 'sometimes|image|mimes:jpeg,png,jpg,gif|max:4096',
+            'name' => 'sometimes|required|string|max:150',
+            'link' => 'sometimes|nullable|string',
+            'image' => 'sometimes|image|mimes:jpeg,png,jpg,gif|max:4096',
             'position' => 'sometimes|required|string|max:50',
-            'status'   => 'sometimes|required|integer|in:0,1',
+            'status' => 'sometimes|required|integer|in:0,1',
         ]);
 
         if ($validator->fails()) {
             return response()->json(['errors' => $validator->errors()], 422);
         }
 
-        $data = $request->only(['name','link','position','status']);
+        $data = $request->only(['name', 'link', 'position', 'status']);
 
         if ($request->hasFile('image')) {
             $data['image'] = $this->uploadLocal($request->file('image'));

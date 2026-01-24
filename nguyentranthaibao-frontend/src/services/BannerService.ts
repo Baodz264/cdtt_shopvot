@@ -1,4 +1,3 @@
-// services/BannerService.ts
 import api from "./api";
 
 export interface Banner {
@@ -12,7 +11,6 @@ export interface Banner {
   updated_at?: string;
 }
 
-// Kết quả phân trang
 export interface PaginatedBanners {
   page: number;
   limit: number;
@@ -21,20 +19,32 @@ export interface PaginatedBanners {
   data: Banner[];
 }
 
+export interface BannerListParams {
+  search?: string;
+  status?: 0 | 1;
+  position?: string;
+  from_date?: string;
+  to_date?: string;
+  sort_by?: "id" | "name" | "created_at";
+  sort_order?: "asc" | "desc";
+  page?: number;
+  limit?: number;
+}
+
 const BannerService = {
-  // Lấy danh sách banner với phân trang, search và filter status
-  async list(params?: { search?: string; status?: 0 | 1; page?: number; limit?: number }): Promise<PaginatedBanners> {
+  /* ================= LIST ================= */
+  async list(params?: BannerListParams): Promise<PaginatedBanners> {
     const response = await api.get("/banners", { params });
     return response.data;
   },
 
-  // Lấy chi tiết banner
+  /* ================= DETAIL ================= */
   async get(id: number): Promise<Banner> {
     const response = await api.get(`/banners/${id}`);
     return response.data;
   },
 
-  // Thêm mới banner (upload ảnh)
+  /* ================= CREATE ================= */
   async create(data: {
     name: string;
     link?: string;
@@ -47,15 +57,17 @@ const BannerService = {
     if (data.link) formData.append("link", data.link);
     formData.append("image", data.image);
     formData.append("position", data.position);
-    if (data.status !== undefined) formData.append("status", data.status.toString());
+    if (data.status !== undefined)
+      formData.append("status", data.status.toString());
 
     const response = await api.post("/banners", formData, {
       headers: { "Content-Type": "multipart/form-data" },
     });
+
     return response.data;
   },
 
-  // Cập nhật banner (có thể thay ảnh)
+  /* ================= UPDATE ================= */
   async update(
     id: number,
     data: {
@@ -67,21 +79,24 @@ const BannerService = {
     }
   ): Promise<Banner> {
     const formData = new FormData();
-    if (data.name) formData.append("name", data.name);
-    if (data.link) formData.append("link", data.link);
+
+    if (data.name !== undefined) formData.append("name", data.name);
+    if (data.link !== undefined) formData.append("link", data.link);
     if (data.image) formData.append("image", data.image);
-    if (data.position) formData.append("position", data.position);
-    if (data.status !== undefined) formData.append("status", data.status.toString());
+    if (data.position !== undefined)
+      formData.append("position", data.position);
+    if (data.status !== undefined)
+      formData.append("status", data.status.toString());
 
     const response = await api.post(`/banners/${id}`, formData, {
       headers: { "Content-Type": "multipart/form-data" },
-      // Laravel có thể cần _method=PUT nếu dùng POST + _method
-      params: { _method: "PUT" },
+      params: { _method: "PUT" }, // chuẩn Laravel
     });
+
     return response.data;
   },
 
-  // Xóa banner
+  /* ================= DELETE ================= */
   async delete(id: number): Promise<{ message: string }> {
     const response = await api.delete(`/banners/${id}`);
     return response.data;

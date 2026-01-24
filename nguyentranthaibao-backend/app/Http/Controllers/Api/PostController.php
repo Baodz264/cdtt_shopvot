@@ -17,19 +17,72 @@ class PostController extends Controller
     {
         $query = Post::with(['topic', 'user']);
 
-        if ($request->filled('search')) {
-            $query->where('title', 'like', "%{$request->search}%");
+        /* ================= SEARCH ================= */
+
+        if ($request->filled('keyword')) {
+            $keyword = $request->keyword;
+            $query->where(function ($q) use ($keyword) {
+                $q->where('title', 'like', "%$keyword%")
+                    ->orWhere('excerpt', 'like', "%$keyword%")
+                    ->orWhereHas('topic', function ($t) use ($keyword) {
+                        $t->where('name', 'like', "%$keyword%");
+                    })
+                    ->orWhereHas('user', function ($u) use ($keyword) {
+                        $u->where('name', 'like', "%$keyword%");
+                    });
+            });
         }
+
+        /* ================= FILTER ================= */
 
         if ($request->filled('type')) {
             $query->where('type', $request->type);
         }
 
+        if ($request->filled('status')) {
+            $query->where('status', $request->status);
+        }
+
+        if ($request->filled('topic_id')) {
+            $query->where('topic_id', $request->topic_id);
+        }
+
+        if ($request->filled('user_id')) {
+            $query->where('user_id', $request->user_id);
+        }
+
+        // Lọc theo lượt xem
+        if ($request->filled('min_views')) {
+            $query->where('views', '>=', $request->min_views);
+        }
+
+        if ($request->filled('max_views')) {
+            $query->where('views', '<=', $request->max_views);
+        }
+
+        // Lọc theo ngày tạo
+        if ($request->filled('from_date')) {
+            $query->whereDate('created_at', '>=', $request->from_date);
+        }
+
+        if ($request->filled('to_date')) {
+            $query->whereDate('created_at', '<=', $request->to_date);
+        }
+
+        /* ================= SORT ================= */
+
+        $sortBy = $request->get('sort_by', 'created_at'); // created_at | views | title
+        $sortOrder = $request->get('sort_order', 'desc'); // asc | desc
+
+        $query->orderBy($sortBy, $sortOrder);
+
+        /* ================= PAGINATION ================= */
+
         $limit = (int) $request->get('limit', 10);
         $page = (int) $request->get('page', 1);
         $offset = ($page - 1) * $limit;
-        $total = $query->count();
 
+        $total = $query->count();
         $posts = $query->offset($offset)->limit($limit)->get();
 
         return response()->json([
@@ -40,6 +93,7 @@ class PostController extends Controller
             'data' => $posts,
         ]);
     }
+
     public function showBySlug(string $slug)
     {
         $post = Post::with(['topic', 'user'])

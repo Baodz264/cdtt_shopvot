@@ -14,11 +14,15 @@ import {
   Tag,
   Space,
   Input,
+  Row,
+  Col,
+  Divider,
 } from "antd";
 import dayjs from "dayjs";
 
 import ProductSaleService, {
   ProductSalePayload,
+  ProductSaleListParams,
 } from "@/services/ProductSaleService";
 import ProductService from "@/services/ProductService";
 import { useToast } from "@/context/ToastProvider";
@@ -60,7 +64,14 @@ export default function ProductSaleManager() {
   const [loading, setLoading] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
   const [editingSale, setEditingSale] = useState<ProductSale | null>(null);
-  const [searchText, setSearchText] = useState("");
+
+  /* ================= FILTER STATE ================= */
+  const [filters, setFilters] = useState<ProductSaleListParams>({
+    page: 1,
+    limit: 10,
+    sort_by: "id",
+    sort_order: "desc",
+  });
 
   /* ================= PAGINATION ================= */
   const [pagination, setPagination] = useState({
@@ -79,28 +90,27 @@ export default function ProductSaleManager() {
     }
   };
 
-  /* ================= LOAD SALES (SERVER PAGINATION) ================= */
-  const loadData = async (
-    page = pagination.current,
-    pageSize = pagination.pageSize,
-    search = searchText
-  ) => {
+  /* ================= LOAD DATA ================= */
+  const loadData = async (params?: Partial<ProductSaleListParams>) => {
     try {
       setLoading(true);
 
-      const res = await ProductSaleService.list({
-        page,
-        limit: pageSize,
-        search: search || undefined,
-      });
+      const finalParams = {
+        ...filters,
+        ...params,
+      };
+
+      const res = await ProductSaleService.list(finalParams);
 
       setData(res.data.data);
 
       setPagination({
-        current: page,
-        pageSize,
-        total: res.data.total, // backend phải trả total
+        current: res.data.current_page,
+        pageSize: res.data.per_page,
+        total: res.data.total,
       });
+
+      setFilters(finalParams);
     } catch {
       toast.error("Không tải được danh sách sản phẩm sale");
     } finally {
@@ -110,7 +120,7 @@ export default function ProductSaleManager() {
 
   useEffect(() => {
     loadProducts();
-    loadData(1, pagination.pageSize);
+    loadData();
   }, []);
 
   /* ================= MODAL ================= */
@@ -160,7 +170,7 @@ export default function ProductSaleManager() {
 
       setModalVisible(false);
       setEditingSale(null);
-      loadData(pagination.current, pagination.pageSize);
+      loadData();
     } catch {
       toast.error("Lỗi khi lưu sản phẩm sale");
     } finally {
@@ -173,7 +183,7 @@ export default function ProductSaleManager() {
     try {
       await ProductSaleService.delete(id);
       toast.success("Xóa sản phẩm sale thành công");
-      loadData(pagination.current, pagination.pageSize);
+      loadData();
     } catch {
       toast.error("Xóa thất bại");
     }
@@ -182,10 +192,9 @@ export default function ProductSaleManager() {
   /* ================= TABLE ================= */
   const columns = [
     { title: "ID", dataIndex: "id", width: 70 },
-
     {
       title: "Sản phẩm",
-      render: (_: unknown, record: ProductSale) => record.product?.name,
+      render: (_: unknown, r: ProductSale) => r.product?.name,
     },
     {
       title: "Giá gốc",
@@ -223,11 +232,6 @@ export default function ProductSaleManager() {
         r.status ? <Tag color="green">Bật</Tag> : <Tag>Ẩn</Tag>,
     },
     {
-      title: "Ngày tạo",
-      dataIndex: "created_at",
-      render: (v: string) => dayjs(v).format("DD/MM/YYYY HH:mm"),
-    },
-    {
       title: "Hành động",
       render: (_: unknown, r: ProductSale) => (
         <Space>
@@ -250,22 +254,64 @@ export default function ProductSaleManager() {
   /* ================= RENDER ================= */
   return (
     <div className="p-6">
-      <div className="flex justify-between mb-4">
-        <Input.Search
-          placeholder="Tìm theo tên sản phẩm"
-          allowClear
-          enterButton
-          style={{ width: 300 }}
-          onSearch={(value) => {
-            setSearchText(value);
-            loadData(1, pagination.pageSize, value);
-          }}
-        />
+      {/* FILTER */}
+      <Row gutter={12} className="mb-4">
+        <Col span={6}>
+          <Input.Search
+            placeholder="Tìm sản phẩm"
+            allowClear
+            onSearch={(v) => loadData({ search: v, page: 1 })}
+          />
+        </Col>
 
-        <Button type="primary" onClick={openModal}>
-          Thêm sản phẩm sale
-        </Button>
-      </div>
+        <Col span={4}>
+          <Select
+            allowClear
+            placeholder="Trạng thái"
+            className="w-full"
+            onChange={(v) => loadData({ status: v, page: 1 })}
+          >
+            <Select.Option value={1}>Bật</Select.Option>
+            <Select.Option value={0}>Ẩn</Select.Option>
+          </Select>
+        </Col>
+
+        <Col span={4}>
+          <Select
+            placeholder="Sắp xếp"
+            className="w-full"
+            defaultValue="id"
+            // Sửa lỗi tại đây bằng cách ép kiểu value
+            onChange={(v: ProductSaleListParams["sort_by"]) => loadData({ sort_by: v })}
+          >
+            <Select.Option value="id">ID</Select.Option>
+            <Select.Option value="sale_price">Giá sale</Select.Option>
+            <Select.Option value="sale_percent">% giảm</Select.Option>
+            <Select.Option value="created_at">Ngày tạo</Select.Option>
+          </Select>
+        </Col>
+
+        <Col span={4}>
+          <Select
+            placeholder="Thứ tự"
+            className="w-full"
+            defaultValue="desc"
+            // Sửa lỗi tại đây bằng cách ép kiểu value
+            onChange={(v: ProductSaleListParams["sort_order"]) => loadData({ sort_order: v })}
+          >
+            <Select.Option value="asc">Tăng dần</Select.Option>
+            <Select.Option value="desc">Giảm dần</Select.Option>
+          </Select>
+        </Col>
+
+        <Col span={6} className="text-right">
+          <Button type="primary" onClick={openModal}>
+            Thêm sản phẩm sale
+          </Button>
+        </Col>
+      </Row>
+
+      <Divider />
 
       <Table
         rowKey="id"
@@ -277,11 +323,12 @@ export default function ProductSaleManager() {
           pageSize: pagination.pageSize,
           total: pagination.total,
           showSizeChanger: true,
-          pageSizeOptions: ["5", "10", "20", "50"],
-          onChange: (page, pageSize) => loadData(page, pageSize),
+          onChange: (page, pageSize) =>
+            loadData({ page, limit: pageSize }),
         }}
       />
 
+      {/* MODAL */}
       <Modal
         title={editingSale ? "Cập nhật sản phẩm sale" : "Thêm sản phẩm sale"}
         open={modalVisible}
@@ -330,7 +377,6 @@ export default function ProductSaleManager() {
             label="Trạng thái"
             name="status"
             valuePropName="checked"
-            initialValue={true}
           >
             <Switch checkedChildren="Bật" unCheckedChildren="Tắt" />
           </Form.Item>

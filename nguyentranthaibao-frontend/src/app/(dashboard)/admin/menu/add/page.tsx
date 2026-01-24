@@ -1,100 +1,103 @@
 "use client";
 
-import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { Card, Form, Input, Select, Button, Switch, message } from "antd";
+import MenuService, { MenuCreateRequest } from "@/services/MenuService";
 
-type MenuType = "category" | "topic" | "post" | "custom";
+const { Option } = Select;
 
 export default function AddMenuPage() {
   const router = useRouter();
-  const [menu, setMenu] = useState<{
-    name: string;
-    link: string;
-    type: MenuType;
-    position: "top" | "middle" | "bottom";
-    status: number;
-  }>({
-    name: "",
-    link: "",
-    type: "custom",
-    position: "top",
-    status: 1,
-  });
+  const [form] = Form.useForm();
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    alert(`Thêm menu thành công: ${menu.name}`);
-    router.push("/admin/menu");
+  const onFinish = async (values: MenuCreateRequest & { statusSwitch: boolean }) => {
+    try {
+      const payload: MenuCreateRequest = {
+        name: values.name,
+        link: values.link || null,
+        type: values.type,
+        position: values.position,
+        parent_id: values.parent_id || null,
+        status: values.statusSwitch ? 1 : 0
+      };
+
+      const res = await MenuService.create(payload);
+
+      if (res.status) {
+        message.success("Thêm menu thành công!");
+        router.push("/admin/menu");
+      } else {
+        message.error("Thêm menu thất bại!");
+      }
+    } catch (error) {
+      console.error(error);
+      message.error("Lỗi khi gọi API!");
+    }
   };
 
   return (
-    <div className="p-6">
-      <h1 className="text-2xl font-bold mb-4">Thêm Menu</h1>
-      <form onSubmit={handleSubmit} className="max-w-lg space-y-4">
-        <div>
-          <label className="block mb-1">Tên Menu</label>
-          <input
-            type="text"
-            className="w-full border p-2 rounded"
-            value={menu.name}
-            onChange={(e) => setMenu({ ...menu, name: e.target.value })}
-            required
-          />
-        </div>
-        <div>
-          <label className="block mb-1">Link</label>
-          <input
-            type="text"
-            className="w-full border p-2 rounded"
-            value={menu.link}
-            onChange={(e) => setMenu({ ...menu, link: e.target.value })}
-          />
-        </div>
-        <div>
-          <label className="block mb-1">Loại</label>
-          <select
-            className="w-full border p-2 rounded"
-            value={menu.type}
-            onChange={(e) => setMenu({ ...menu, type: e.target.value as MenuType })}
-          >
-            <option value="category">Category</option>
-            <option value="topic">Topic</option>
-            <option value="post">Post</option>
-            <option value="custom">Custom</option>
-          </select>
-        </div>
-        <div>
-          <label className="block mb-1">Vị trí</label>
-          <select
-            className="w-full border p-2 rounded"
-            value={menu.position}
-            onChange={(e) =>
-              setMenu({
-                ...menu,
-                position: e.target.value as "top" | "middle" | "bottom",
-              })
-            }
-          >
-            <option value="top">Top</option>
-            <option value="middle">Middle</option>
-            <option value="bottom">Bottom</option>
-          </select>
-        </div>
-        <div>
-          <label className="block mb-1">Trạng thái</label>
-          <select
-            className="w-full border p-2 rounded"
-            value={menu.status}
-            onChange={(e) => setMenu({ ...menu, status: Number(e.target.value) })}
-          >
-            <option value={1}>Hiển thị</option>
-            <option value={0}>Ẩn</option>
-          </select>
-        </div>
-        <button type="submit" className="bg-blue-500 text-white px-4 py-2 rounded">
-          Thêm Menu
-        </button>
-      </form>
-    </div>
+    <Card title="Thêm Menu" className="max-w-2xl">
+      <Form
+        layout="vertical"
+        form={form}
+        onFinish={onFinish}
+        initialValues={{
+          type: "custom",
+          position: "admin",
+          statusSwitch: true
+        }}
+      >
+        <Form.Item
+          label="Tên Menu"
+          name="name"
+          rules={[{ required: true, message: "Vui lòng nhập tên menu" }]}
+        >
+          <Input placeholder="Nhập tên menu" />
+        </Form.Item>
+
+        <Form.Item label="Link" name="link">
+          <Input placeholder="/admin/products" />
+        </Form.Item>
+
+        <Form.Item
+          label="Loại"
+          name="type"
+          rules={[{ required: true }]}
+        >
+          <Select>
+            <Option value="category">Category</Option>
+            <Option value="topic">Topic</Option>
+            <Option value="post">Post</Option>
+            <Option value="custom">Custom</Option>
+          </Select>
+        </Form.Item>
+
+        <Form.Item label="Menu cha" name="parent_id">
+          <Input type="number" placeholder="ID menu cha (nếu có)" />
+        </Form.Item>
+
+        <Form.Item
+          label="Vị trí"
+          name="position"
+          rules={[{ required: true }]}
+        >
+          <Select>
+            <Option value="admin">Admin</Option>
+            <Option value="header">Header</Option>
+            <Option value="footer">Footer</Option>
+          </Select>
+        </Form.Item>
+
+        <Form.Item label="Trạng thái" name="statusSwitch" valuePropName="checked">
+          <Switch checkedChildren="Hiển thị" unCheckedChildren="Ẩn" />
+        </Form.Item>
+
+        <Form.Item>
+          <Button type="primary" htmlType="submit">
+            Thêm Menu
+          </Button>
+        </Form.Item>
+      </Form>
+    </Card>
   );
 }

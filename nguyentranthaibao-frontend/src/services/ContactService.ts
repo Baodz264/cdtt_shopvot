@@ -1,6 +1,8 @@
 // services/ContactService.ts
 import api from "./api";
 
+/* ================= INTERFACES ================= */
+
 export interface Contact {
   id: number;
   fullname: string;
@@ -21,20 +23,34 @@ export interface PaginatedContacts {
   data: Contact[];
 }
 
+/* ===== Params đúng với ContactController@index ===== */
+export interface ContactListParams {
+  keyword?: string;
+  status?: 0 | 1;
+  from_date?: string; // YYYY-MM-DD
+  to_date?: string;   // YYYY-MM-DD
+  sort_by?: "created_at" | "fullname";
+  sort_order?: "asc" | "desc";
+  page?: number;
+  limit?: number;
+}
+
+/* ================= SERVICE ================= */
+
 const ContactService = {
-  // Lấy danh sách contact với phân trang và filter status
-  async list(params?: { status?: 0 | 1; page?: number; limit?: number }): Promise<PaginatedContacts> {
+  /* ========== LIST ========== */
+  async list(params?: ContactListParams): Promise<PaginatedContacts> {
     const response = await api.get("/contacts", { params });
     return response.data;
   },
 
-  // Lấy chi tiết contact
+  /* ========== DETAIL ========== */
   async get(id: number): Promise<Contact> {
     const response = await api.get(`/contacts/${id}`);
     return response.data;
   },
 
-  // Thêm contact
+  /* ========== CREATE ========== */
   async create(data: {
     fullname: string;
     email?: string;
@@ -47,20 +63,23 @@ const ContactService = {
     return response.data;
   },
 
-  // Cập nhật contact
-  async update(id: number, data: {
-    fullname?: string;
-    email?: string;
-    phone?: string;
-    message?: string;
-    reply?: string;
-    status?: 0 | 1;
-  }): Promise<Contact> {
+  /* ========== UPDATE ========== */
+  async update(
+    id: number,
+    data: {
+      fullname?: string;
+      email?: string;
+      phone?: string;
+      message?: string;
+      reply?: string;
+      status?: 0 | 1;
+    }
+  ): Promise<Contact> {
     const response = await api.put(`/contacts/${id}`, data);
     return response.data;
   },
 
-  // Xóa contact
+  /* ========== DELETE ========== */
   async delete(id: number): Promise<{ message: string }> {
     const response = await api.delete(`/contacts/${id}`);
     return response.data;

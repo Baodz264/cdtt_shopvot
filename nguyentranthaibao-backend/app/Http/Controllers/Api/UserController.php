@@ -16,7 +16,8 @@ class UserController extends Controller
      */
     private function uploadAvatar($file)
     {
-        if (!$file) return null;
+        if (!$file)
+            return null;
 
         $folder = public_path('uploads/avatars');
 
@@ -37,30 +38,53 @@ class UserController extends Controller
     {
         $query = User::query();
 
+        /* ================= SEARCH ================= */
+
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'like', "%$search%")
+                    ->orWhere('email', 'like', "%$search%")
+                    ->orWhere('phone', 'like', "%$search%");
+            });
+        }
+
+        /* ================= FILTER ================= */
+
+        // Filter role
         if ($request->filled('role')) {
             $query->where('role', $request->role);
         }
 
+        // Filter status
         if ($request->filled('status')) {
             $query->where('status', $request->status);
         }
 
-        if ($request->filled('search')) {
-            $search = $request->search;
-            $query->where(function($q) use ($search) {
-                $q->where('name', 'like', "%$search%")
-                  ->orWhere('email', 'like', "%$search%");
-            });
+        // Filter theo ngày tạo
+        if ($request->filled('from_date')) {
+            $query->whereDate('created_at', '>=', $request->from_date);
         }
 
-        $query->orderBy('id', 'desc');
+        if ($request->filled('to_date')) {
+            $query->whereDate('created_at', '<=', $request->to_date);
+        }
+
+        /* ================= SORT ================= */
+
+        $sortBy = $request->get('sort_by', 'id');        // id | name | email | created_at
+        $sortOrder = $request->get('sort_order', 'desc');   // asc | desc
+
+        $query->orderBy($sortBy, $sortOrder);
+
+        /* ================= PAGINATION ================= */
 
         $limit = (int) $request->get('limit', 10);
-        $page  = (int) $request->get('page', 1);
+        $page = (int) $request->get('page', 1);
         $offset = ($page - 1) * $limit;
 
         $total = $query->count();
-        $data  = $query->offset($offset)->limit($limit)->get();
+        $data = $query->skip($offset)->take($limit)->get();
 
         return response()->json([
             'page' => $page,
@@ -72,6 +96,7 @@ class UserController extends Controller
             'data' => $data
         ]);
     }
+
 
     /**
      * Chi tiết User
@@ -87,20 +112,20 @@ class UserController extends Controller
     public function store(Request $request)
     {
         $validator = Validator::make($request->all(), [
-            'name'     => 'nullable|string|max:100',
-            'email'    => 'required|email|max:150|unique:users',
-            'phone'    => 'nullable|string|max:20',
+            'name' => 'nullable|string|max:100',
+            'email' => 'required|email|max:150|unique:users',
+            'phone' => 'nullable|string|max:20',
             'password' => 'required|string|min:8',
-            'avatar'   => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:2048',
-            'role'     => 'required|in:customer,admin',
-            'status'   => 'required|integer|in:0,1',
+            'avatar' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:2048',
+            'role' => 'required|in:customer,admin',
+            'status' => 'required|integer|in:0,1',
         ]);
 
         if ($validator->fails()) {
             return response()->json(['errors' => $validator->errors()], 422);
         }
 
-        $data = $request->only(['name','email','phone','role','status']);
+        $data = $request->only(['name', 'email', 'phone', 'role', 'status']);
         $data['password'] = Hash::make($request->password);
 
         if ($request->hasFile('avatar')) {
@@ -118,20 +143,20 @@ class UserController extends Controller
     public function update(Request $request, User $user)
     {
         $validator = Validator::make($request->all(), [
-            'name'     => 'sometimes|nullable|string|max:100',
-            'email'    => 'sometimes|required|email|max:150|unique:users,email,' . $user->id,
-            'phone'    => 'sometimes|nullable|string|max:20',
+            'name' => 'sometimes|nullable|string|max:100',
+            'email' => 'sometimes|required|email|max:150|unique:users,email,' . $user->id,
+            'phone' => 'sometimes|nullable|string|max:20',
             'password' => 'sometimes|nullable|string|min:8',
-            'avatar'   => 'sometimes|nullable|image|mimes:jpeg,png,jpg,gif,webp|max:2048',
-            'role'     => 'sometimes|in:customer,admin',
-            'status'   => 'sometimes|integer|in:0,1',
+            'avatar' => 'sometimes|nullable|image|mimes:jpeg,png,jpg,gif,webp|max:2048',
+            'role' => 'sometimes|in:customer,admin',
+            'status' => 'sometimes|integer|in:0,1',
         ]);
 
         if ($validator->fails()) {
             return response()->json(['errors' => $validator->errors()], 422);
         }
 
-        $data = $request->only(['name','email','phone','role','status']);
+        $data = $request->only(['name', 'email', 'phone', 'role', 'status']);
 
         if ($request->filled('password')) {
             $data['password'] = Hash::make($request->password);
@@ -141,7 +166,8 @@ class UserController extends Controller
             // Xóa avatar cũ nếu tồn tại
             if ($user->avatar) {
                 $oldPath = public_path(ltrim($user->avatar, '/'));
-                if (File::exists($oldPath)) File::delete($oldPath);
+                if (File::exists($oldPath))
+                    File::delete($oldPath);
             }
             $data['avatar'] = $this->uploadAvatar($request->file('avatar'));
         }
@@ -158,7 +184,8 @@ class UserController extends Controller
     {
         if ($user->avatar) {
             $oldPath = public_path(ltrim($user->avatar, '/'));
-            if (File::exists($oldPath)) File::delete($oldPath);
+            if (File::exists($oldPath))
+                File::delete($oldPath);
         }
 
         $user->delete();

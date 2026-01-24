@@ -2,14 +2,27 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Table, Button, Popconfirm, Tag, Space, Card, Pagination } from "antd";
+import {
+  Table,
+  Button,
+  Popconfirm,
+  Tag,
+  Space,
+  Card,
+  Pagination,
+  Input,
+  Select,
+} from "antd";
 import Link from "next/link";
-import TopicService, { Topic, PaginatedResponse } from "@/services/TopicService";
+import TopicService, {
+  Topic,
+  PaginatedResponse,
+} from "@/services/TopicService";
 import { useToast } from "@/context/ToastProvider";
 
 export default function TopicList() {
   const router = useRouter();
-  const toast = useToast(); // <-- Sử dụng toast
+  const toast = useToast();
 
   const [topics, setTopics] = useState<Topic[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
@@ -18,13 +31,31 @@ export default function TopicList() {
   const [pageSize, setPageSize] = useState(5);
   const [total, setTotal] = useState(0);
 
+  // ===== Filter & Search =====
+  const [keyword, setKeyword] = useState("");
+  const [status, setStatus] = useState<number | undefined>(undefined);
+
   // ===========================
   // Lấy danh sách topic từ API
   // ===========================
-  const fetchTopics = async (page = 1, limit = pageSize) => {
+  const fetchTopics = async (
+    page = 1,
+    limit = pageSize,
+    extra?: {
+      keyword?: string;
+      status?: number;
+    }
+  ) => {
     try {
       setLoading(true);
-      const res: PaginatedResponse<Topic> = await TopicService.list({ page, limit });
+
+      const res: PaginatedResponse<Topic> = await TopicService.list({
+        page,
+        limit,
+        keyword: extra?.keyword,
+        status: extra?.status,
+      });
+
       setTopics(res.data);
       setCurrentPage(res.page);
       setPageSize(res.limit);
@@ -48,7 +79,7 @@ export default function TopicList() {
     try {
       await TopicService.delete(id);
       toast.success("Xóa topic thành công!");
-      fetchTopics(currentPage, pageSize); // reload page
+      fetchTopics(currentPage, pageSize, { keyword, status });
     } catch (error) {
       console.error(error);
       toast.error("Xóa thất bại!");
@@ -66,7 +97,11 @@ export default function TopicList() {
       title: "Trạng thái",
       dataIndex: "status",
       render: (status: number) =>
-        status ? <Tag color="green">Hiển thị</Tag> : <Tag color="gray">Ẩn</Tag>,
+        status ? (
+          <Tag color="green">Hiển thị</Tag>
+        ) : (
+          <Tag color="gray">Ẩn</Tag>
+        ),
     },
     { title: "Ngày tạo", dataIndex: "created_at" },
     {
@@ -76,7 +111,9 @@ export default function TopicList() {
           <Button
             type="link"
             style={{ padding: 0 }}
-            onClick={() => router.push(`/admin/topics/${record.id}/edit`)}
+            onClick={() =>
+              router.push(`/admin/topics/${record.id}/edit`)
+            }
           >
             Sửa
           </Button>
@@ -97,6 +134,7 @@ export default function TopicList() {
 
   return (
     <Card className="p-4 shadow-sm">
+      {/* ===== Header ===== */}
       <div className="flex justify-between items-center mb-4">
         <h2 className="text-xl font-bold">Danh sách Topic</h2>
         <Link href="/admin/topics/add">
@@ -106,6 +144,51 @@ export default function TopicList() {
         </Link>
       </div>
 
+      {/* ===== Filter ===== */}
+      <div className="flex gap-3 mb-4">
+        <Input
+          placeholder="Tìm theo tên topic..."
+          value={keyword}
+          allowClear
+          onChange={(e) => setKeyword(e.target.value)}
+          onPressEnter={() =>
+            fetchTopics(1, pageSize, { keyword, status })
+          }
+        />
+
+        <Select
+          placeholder="Trạng thái"
+          allowClear
+          style={{ width: 160 }}
+          value={status}
+          onChange={(value) => setStatus(value)}
+          options={[
+            { label: "Hiển thị", value: 1 },
+            { label: "Ẩn", value: 0 },
+          ]}
+        />
+
+        <Button
+          type="primary"
+          onClick={() =>
+            fetchTopics(1, pageSize, { keyword, status })
+          }
+        >
+          Lọc
+        </Button>
+
+        <Button
+          onClick={() => {
+            setKeyword("");
+            setStatus(undefined);
+            fetchTopics(1, pageSize);
+          }}
+        >
+          Reset
+        </Button>
+      </div>
+
+      {/* ===== Table ===== */}
       <Table
         size="small"
         bordered
@@ -113,19 +196,26 @@ export default function TopicList() {
         columns={columns}
         dataSource={topics}
         loading={loading}
-        pagination={false} // sử dụng pagination riêng bên dưới
+        pagination={false}
       />
 
+      {/* ===== Pagination ===== */}
       <div className="flex justify-end mt-4">
         <Pagination
           current={currentPage}
           pageSize={pageSize}
           total={total}
           showSizeChanger
-          onChange={(page, size) => fetchTopics(page, size)}
-          onShowSizeChange={(current, size) => fetchTopics(1, size)}
+          onChange={(page, size) =>
+            fetchTopics(page, size, { keyword, status })
+          }
+          onShowSizeChange={(current, size) =>
+            fetchTopics(1, size, { keyword, status })
+          }
           pageSizeOptions={["5", "10", "20", "50"]}
-          showTotal={(total, range) => `${range[0]}-${range[1]} trên ${total} topic`}
+          showTotal={(total, range) =>
+            `${range[0]}-${range[1]} trên ${total} topic`
+          }
         />
       </div>
     </Card>

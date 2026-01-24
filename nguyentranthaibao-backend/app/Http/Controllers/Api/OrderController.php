@@ -3,10 +3,13 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\User;
 use Illuminate\Http\Request;
 use App\Models\Order;
 use App\Models\OrderItem;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\Mail;
+use App\Mail\OrderPlacedMail;
 
 class OrderController extends Controller
 {
@@ -17,20 +20,69 @@ class OrderController extends Controller
     {
         $query = Order::query();
 
+        /* ================= FILTER ================= */
+
+        // Lọc theo user
         if ($request->filled('user_id')) {
             $query->where('user_id', $request->user_id);
         }
 
+        // Lọc theo trạng thái đơn
         if ($request->filled('status')) {
             $query->where('status', $request->status);
         }
 
-        // Phân trang
-        $limit = (int) $request->get('limit', 10);
-        $page  = (int) $request->get('page', 1);
-        $offset = ($page - 1) * $limit;
-        $total = $query->count();
+        // Lọc theo trạng thái thanh toán
+        if ($request->filled('payment_status')) {
+            $query->where('payment_status', $request->payment_status);
+        }
 
+        // Lọc theo phương thức thanh toán
+        if ($request->filled('payment_method')) {
+            $query->where('payment_method', $request->payment_method);
+        }
+
+        // Lọc theo khoảng tiền
+        if ($request->filled('min_total')) {
+            $query->where('total_money', '>=', $request->min_total);
+        }
+
+        if ($request->filled('max_total')) {
+            $query->where('total_money', '<=', $request->max_total);
+        }
+
+        // Lọc theo ngày tạo
+        if ($request->filled('from_date')) {
+            $query->whereDate('created_at', '>=', $request->from_date);
+        }
+
+        if ($request->filled('to_date')) {
+            $query->whereDate('created_at', '<=', $request->to_date);
+        }
+
+        // Search fullname / phone
+        if ($request->filled('keyword')) {
+            $keyword = $request->keyword;
+            $query->where(function ($q) use ($keyword) {
+                $q->where('fullname', 'like', "%$keyword%")
+                    ->orWhere('phone', 'like', "%$keyword%");
+            });
+        }
+
+        /* ================= SORT ================= */
+
+        $sortBy = $request->get('sort_by', 'created_at'); // created_at | total_money
+        $sortOrder = $request->get('sort_order', 'desc'); // asc | desc
+
+        $query->orderBy($sortBy, $sortOrder);
+
+        /* ================= PAGINATION ================= */
+
+        $limit = (int) $request->get('limit', 10);
+        $page = (int) $request->get('page', 1);
+        $offset = ($page - 1) * $limit;
+
+        $total = $query->count();
         $data = $query->offset($offset)->limit($limit)->get();
 
         return response()->json([
@@ -41,6 +93,7 @@ class OrderController extends Controller
             'data' => $data
         ]);
     }
+
 
     /**
      * Chi tiết đơn hàng, bao gồm các item
@@ -73,13 +126,45 @@ class OrderController extends Controller
             return response()->json(['errors' => $validator->errors()], 422);
         }
 
+        // Tạo đơn hàng
         $order = Order::create($request->only([
-            'user_id','address_id','fullname','phone','note','total_money',
-            'payment_method','status','payment_status','voucher_id','discount_price'
+            'user_id',
+            'address_id',
+            'fullname',
+            'phone',
+            'note',
+            'total_money',
+            'payment_method',
+            'status',
+            'payment_status',
+            'voucher_id',
+            'discount_price'
         ]));
+
+        /**
+         * ===== GỬI MAIL XÁC NHẬN ĐƠN HÀNG =====
+         */
+        try {
+            $email = null;
+
+            // Nếu có user_id → lấy email user
+            if ($request->filled('user_id')) {
+                $user = User::find($request->user_id);
+                $email = $user?->email;
+            }
+
+            // Nếu có email thì gửi
+            if ($email) {
+                Mail::to($email)->send(new OrderPlacedMail($order));
+            }
+        } catch (\Exception $e) {
+            // Không crash API nếu gửi mail lỗi
+            \Log::error('Send mail order error: ' . $e->getMessage());
+        }
 
         return response()->json($order, 201);
     }
+
 
     /**
      * Cập nhật đơn hàng
@@ -102,8 +187,14 @@ class OrderController extends Controller
         }
 
         $data = $request->only([
-            'fullname','phone','note','total_money','payment_method',
-            'status','payment_status','discount_price'
+            'fullname',
+            'phone',
+            'note',
+            'total_money',
+            'payment_method',
+            'status',
+            'payment_status',
+            'discount_price'
         ]);
 
         $order->update($data);

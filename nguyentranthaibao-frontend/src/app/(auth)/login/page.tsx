@@ -12,14 +12,28 @@ const { Title } = Typography;
 export default function LoginPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
-  const toast = useToast(); // ✅ hook của bạn
+  const toast = useToast();
 
   const onFinish = async (values: LoginData) => {
     setLoading(true);
     try {
+      // 1️⃣ Login → lấy token
       await AuthService.login(values);
 
-      toast.success("Đăng nhập thành công!"); // sử dụng Toastify
+      // 2️⃣ Gọi /me để lấy user
+      const meRes = await AuthService.me();
+      const user = meRes?.data || meRes; 
+      // tùy backend trả { data: user } hay user
+
+      // 3️⃣ Check role
+      if (!user || user.role !== "admin") {
+        await AuthService.logout();
+        toast.error("Bạn không có quyền truy cập trang Admin");
+        return;
+      }
+
+      // 4️⃣ Admin hợp lệ
+      toast.success("Đăng nhập Admin thành công!");
       router.push("/admin");
     } catch (err: unknown) {
       if (err instanceof AxiosError && err.response) {
