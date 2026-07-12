@@ -1,117 +1,224 @@
 <div align="center">
-  <img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="300" alt="Racket E-Commerce">
-  <h1 align="center">Racket Shop E-Commerce 🏸🎾</h1>
-  <p align="center">
-    <strong>Hệ thống website Thương mại Điện tử chuyên kinh doanh Vợt Thể Thao (Cầu lông, Tennis) với Next.js 16 & Laravel 12</strong>
+  <a href="#">
+    <img src="https://images.unsplash.com/photo-1622279457486-62dcc4a631d6?q=80&w=1200&auto=format&fit=crop" alt="Badminton E-Commerce Banner" style="border-radius: 15px; margin-bottom: 20px;">
+  </a>
+
+  <h1>🏸 RACKET PRO <i>Store</i> 🎾</h1>
+  
+  <p>
+    <b>Hệ thống Thương mại Điện tử Đỉnh cao chuyên biệt cho Vợt & Phụ kiện Thể thao</b><br>
+    <i>Được xây dựng với sức mạnh của Next.js 16 (React 19) & Laravel 12 API</i>
   </p>
 
-  <p align="center">
-    <img src="https://img.shields.io/badge/Next.js-16.0-black?style=for-the-badge&logo=next.js" alt="Next.js">
-    <img src="https://img.shields.io/badge/React-19.2-blue?style=for-the-badge&logo=react" alt="React">
-    <img src="https://img.shields.io/badge/Laravel-12.0-FF2D20?style=for-the-badge&logo=laravel" alt="Laravel">
-    <img src="https://img.shields.io/badge/Tailwind_CSS-4.0-38B2AC?style=for-the-badge&logo=tailwind-css" alt="Tailwind">
-    <img src="https://img.shields.io/badge/PHP-8.2-777BB4?style=for-the-badge&logo=php" alt="PHP">
+  <p>
+    <a href="#tech-stack"><img src="https://img.shields.io/badge/Architecture-Headless-2ea44f?style=for-the-badge" alt="Headless Architecture"></a>
+    <a href="#frontend"><img src="https://img.shields.io/badge/Frontend-Next.js_16-black?style=for-the-badge&logo=next.js" alt="Next.js"></a>
+    <a href="#backend"><img src="https://img.shields.io/badge/Backend-Laravel_12-FF2D20?style=for-the-badge&logo=laravel" alt="Laravel"></a>
+    <a href="#database"><img src="https://img.shields.io/badge/Database-MySQL_8-4479A1?style=for-the-badge&logo=mysql" alt="MySQL"></a>
+    <a href="#realtime"><img src="https://img.shields.io/badge/Realtime-Socket.io-010101?style=for-the-badge&logo=socket.io" alt="Socket.io"></a>
+  </p>
+  
+  <p>
+    <a href="#-giới-thiệu">Giới thiệu</a> •
+    <a href="#-tính-năng-cốt-lõi">Tính năng</a> •
+    <a href="#-kiến-trúc-hệ-thống">Kiến trúc</a> •
+    <a href="#-công-nghệ-sử-dụng">Công nghệ</a> •
+    <a href="#-hướng-dẫn-chạy-local">Cài đặt</a>
   </p>
 </div>
 
 ---
 
-## 📖 Giới thiệu
-Đây là một hệ thống website thương mại điện tử chuyên biệt dành riêng cho cửa hàng bán dụng cụ thể thao, đặc biệt là **Vợt Cầu Lông và Tennis**. Được thiết kế theo kiến trúc tách biệt (Headless) giữa Frontend và Backend, hệ thống mang lại trải nghiệm mua sắm mượt mà, tối ưu hóa cho tốc độ tải trang, đồng thời cung cấp các công cụ quản trị mạnh mẽ cho chủ shop.
+## 🌟 Giới thiệu
+
+**Racket Pro Store** không chỉ là một website bán hàng thông thường, mà là một **Nền tảng E-Commerce chuyên sâu** được đo ni đóng giày cho dân chơi hệ thể thao (Cầu lông, Tennis, Pickleball...). 
+
+Áp dụng mô hình **Headless E-Commerce** tách biệt hoàn toàn giữa Frontend (Next.js SSR/SSG) và Backend (Laravel RESTful API), hệ thống mang lại trải nghiệm UX/UI mượt mà như một Native App (SPA), tốc độ tải trang tính bằng mili-giây, khả năng scale linh hoạt và tối ưu hóa SEO tuyệt đối.
 
 ---
 
-## ✨ Tính năng nổi bật
+## 🔥 Tính năng Cốt lõi
 
-### 🛍️ Dành cho Khách hàng (Storefront)
-- 🔒 **Xác thực & Bảo mật:** Đăng nhập/đăng ký bằng JWT, xác minh email, lấy lại mật khẩu an toàn.
-- 🏸 **Danh mục Vợt chuyên sâu:** Hỗ trợ sản phẩm nhiều thuộc tính biến thể riêng biệt của vợt (Trọng lượng 3U/4U, Kích thước cán G4/G5, Độ cứng thân vợt, v.v.).
-- 🛒 **Trải nghiệm mua sắm:** Tìm kiếm thông minh, lọc theo thương hiệu (Yonex, Victor, Lining...), giá tiền và thông số kỹ thuật.
-- 💳 **Thanh toán trực tuyến:** Tích hợp cổng thanh toán **VNPay**, hỗ trợ mua sắm an toàn, nhanh chóng.
-- 🎁 **Khuyến mãi & Voucher:** Săn các mã giảm giá, voucher freeship khi mua vợt hoặc phụ kiện.
-- ⭐ **Đánh giá & Tương tác:** Chấm điểm, đánh giá thực tế (có hình ảnh) để giúp người chơi khác chọn được cây vợt ưng ý, thảo luận và trả lời bình luận.
-- 🤖 **Trợ lý ảo (Chatbot tư vấn):** Hỗ trợ giải đáp thắc mắc, tư vấn chọn vợt phù hợp với lối chơi (công, thủ, toàn diện) theo thời gian thực.
+### 🛍️ Client-Side (Storefront - Dành cho Vợt thủ)
+| Tính năng | Mô tả chi tiết | Công nghệ & Tiện ích |
+| :--- | :--- | :--- |
+| **🔐 Bảo mật chuẩn Enterprise** | Xác thực JWT Token bảo mật cao, mã hóa mật khẩu, Verify Email OTP. | `Tymon/JWT-Auth` |
+| **🏸 Xử lý Biến thể Vợt Phức tạp** | Hỗ trợ sản phẩm nhiều chiều không giới hạn: **Trọng lượng (3U/4U), Độ to cán (G4/G5), Sức căng (Tension)**. | Lọc đa điều kiện, Real-time stock |
+| **🛒 Flow Mua Hàng Siêu Tốc** | Thêm vào giỏ hàng với Animation mượt mà, quản lý nhiều địa chỉ nhận hàng (Address Book). | `Framer Motion`, State Management |
+| **💳 Thanh Toán Tích hợp** | Chạm là thanh toán qua cổng **VNPAY** - An toàn, nhanh gọn, tự động webhook trạng thái đơn. | `VNPAY Gateway` |
+| **💬 Real-time Trợ lý ảo** | Chatbot tư vấn chọn vợt theo lối chơi (Công, Thủ, Phản tạt) phản hồi theo thời gian thực. | `Socket.io-client` |
+| **⭐ Đánh giá & Cộng đồng** | Khách mua hàng có thể rate 5 sao, tải lên ảnh feedback thực tế, thả tim (Like) và Reply chéo nhau. | Upload ảnh `Cloudinary` |
+| **🎁 Hệ thống Khuyến mãi** | Ví Voucher thông minh: Thu thập mã giảm giá (Claim Voucher), tính toán tự động giá trị giảm ở Checkout. | Logic nghiệp vụ phức tạp |
 
-### 🛠️ Dành cho Quản trị viên (Admin Dashboard)
-- 📊 **Thống kê & Báo cáo:** Cung cấp biểu đồ doanh thu trực quan, theo dõi mẫu vợt bán chạy.
-- 📦 **Quản lý Kho hàng:** Quản lý phiếu nhập hàng (Imports), theo dõi số lượng tồn kho từng loại biến thể vợt (ví dụ: kho còn bao nhiêu cây Astrox 99 Pro bản 3U).
-- 📝 **Quản lý Sản phẩm:** Dễ dàng cấu hình và quản lý các loại Vợt, Phụ kiện, Thương hiệu.
-- 🖼️ **Quản lý Giao diện:** Cập nhật Banner sự kiện, Menu, thiết lập giao diện chung.
-- 📰 **Tin tức & Kiến thức:** Đăng tải các bài viết review vợt, mẹo đánh cầu lông/tennis chuẩn SEO.
-
----
-
-## 💻 Công nghệ sử dụng (Tech Stack)
-
-### **Frontend (`/nvdn-frontend`)**
-*   **Core:** Next.js 16.0.3, React 19.2.0
-*   **Styling:** Tailwind CSS 4, Ant Design 6
-*   **Animations:** Framer Motion
-*   **Charts:** Chart.js, react-chartjs-2
-*   **Realtime:** Socket.io-client
-*   **State & Fetching:** Axios, JS-Cookie
-
-### **Backend (`/nvdn-backend`)**
-*   **Core:** PHP 8.2, Laravel 12.0
-*   **Database:** MySQL
-*   **Authentication:** Tymon JWT Auth, Sanctum
-*   **Media Storage:** Cloudinary (cloudinary-laravel)
+### 👑 Admin-Side (Dashboard - Dành cho Chủ Shop)
+* **Thống kê Real-time:** Biểu đồ doanh thu cực kỳ trực quan với `Chart.js`, phân tích top vợt bán chạy, tỷ lệ chuyển đổi.
+* **Quản trị Kho Hàng (Inventory):** Quản lý nghiêm ngặt qua hệ thống Phiếu Nhập Hàng (Imports). Theo dõi chính xác từng SKU biến thể (Ví dụ: còn 5 cây Yonex 88D Pro bản 3U).
+* **Quản lý Vận hành:** CRUD toàn bộ hệ sinh thái: Sản phẩm, Danh mục, Nhãn hiệu, Bài viết/Blog kiến thức cầu lông.
+* **Tùy biến Giao diện:** Upload Banners sự kiện, cấu hình Menu động và các thiết lập toàn cục của website ngay trên CMS.
 
 ---
 
-## 📂 Cấu trúc thư mục
+## 🏗️ Kiến trúc Hệ thống
 
-```text
-📦 tttn
- ┣ 📂 nvdn-backend      # RESTful API quản trị và xử lý dữ liệu (Laravel)
- ┃ ┣ 📂 app
- ┃ ┣ 📂 database
- ┃ ┣ 📂 routes          # Cấu hình API endpoints (api.php)
- ┃ ┗ 📜 composer.json
- ┗ 📂 nvdn-frontend     # Giao diện cửa hàng tương tác người dùng (Next.js)
-   ┣ 📂 src
-   ┣ 📂 public
-   ┗ 📜 package.json
+```mermaid
+graph TD
+    Client[Khách hàng / Web Browser] -->|HTTP / REST API| NextJS[Frontend: Next.js 16 Server]
+    NextJS -->|Server-Side Fetching / Client API| Laravel[Backend: Laravel 12 API]
+    Client -.->|WebSockets| SocketIO[Real-time Server / Chatbot]
+    
+    Laravel --> MySQL[(MySQL 8 Database)]
+    Laravel --> Cloudinary[Cloudinary Media CDN]
+    Laravel <--> VNPAY[VNPay Payment Gateway]
+    SocketIO <--> Laravel
+    
+    style NextJS fill:#000,stroke:#fff,stroke-width:2px,color:#fff
+    style Laravel fill:#FF2D20,stroke:#fff,stroke-width:2px,color:#fff
+    style MySQL fill:#4479A1,stroke:#fff,stroke-width:2px,color:#fff
 ```
 
+*(Lưu ý: Github hỗ trợ render trực tiếp sơ đồ Mermaid ở trên)*
+
 ---
 
-## 🚀 Hướng dẫn cài đặt (Local Development)
+## 💻 Công nghệ Sử dụng
 
-### 1. Cài đặt Backend
+### 🎨 Frontend Ecosystem (`/nvdn-frontend`)
+<table style="width: 100%">
+  <tr>
+    <td align="center"><b>Framework</b></td>
+    <td align="center"><b>UI / Styling</b></td>
+    <td align="center"><b>State & Utils</b></td>
+  </tr>
+  <tr>
+    <td>
+      - ⚛️ <b>React 19.2</b><br>
+      - 🚀 <b>Next.js 16.0</b> (App Router, SSR)<br>
+      - 📘 <b>TypeScript / JS</b>
+    </td>
+    <td>
+      - 🎨 <b>Tailwind CSS 4</b><br>
+      - 🐜 <b>Ant Design 6</b><br>
+      - ✨ <b>Framer Motion</b> (Animations)<br>
+      - 📊 <b>Chart.js</b> (Biểu đồ)
+    </td>
+    <td>
+      - 📡 <b>Axios</b> (API Calls)<br>
+      - ⚡ <b>Socket.io-client</b> (Realtime)<br>
+      - 🍪 <b>JS-Cookie</b> (Auth Tokens)<br>
+      - 🔔 <b>React Toastify</b> (Alerts)
+    </td>
+  </tr>
+</table>
+
+### ⚙️ Backend Ecosystem (`/nvdn-backend`)
+<table style="width: 100%">
+  <tr>
+    <td align="center"><b>Core</b></td>
+    <td align="center"><b>Database & Storage</b></td>
+    <td align="center"><b>Packages</b></td>
+  </tr>
+  <tr>
+    <td>
+      - 🐘 <b>PHP 8.2+</b><br>
+      - 🔴 <b>Laravel 12.0</b><br>
+      - 🔒 <b>Sanctum & JWT Auth</b>
+    </td>
+    <td>
+      - 🗄️ <b>MySQL 8</b><br>
+      - ☁️ <b>Cloudinary</b> (Image CDN)<br>
+      - 💾 <b>Local Storage</b> (Logs, Cache)
+    </td>
+    <td>
+      - 🛡️ <b>tymon/jwt-auth</b><br>
+      - ☁️ <b>cloudinary-laravel</b><br>
+      - 🧪 <b>Pest / PHPUnit</b> (Testing)
+    </td>
+  </tr>
+</table>
+
+---
+
+## 🚀 Hướng dẫn chạy Local (Quick Start)
+
+### Bố cục thư mục
 ```bash
+.
+├── nvdn-backend/      # Laravel API
+└── nvdn-frontend/     # Next.js App
+```
+
+### 1. Khởi chạy Backend (API)
+```bash
+# Di chuyển vào thư mục backend
 cd nvdn-backend
+
+# Cài đặt các gói thư viện PHP
 composer install
+
+# Tạo file biến môi trường & gen key
 cp .env.example .env
 php artisan key:generate
+
+# Chạy migration & seed dữ liệu mẫu (Database)
 php artisan migrate --seed
+
+# Khởi chạy server
 php artisan serve
 ```
-*(Yêu cầu cài đặt cấu hình MySQL, tài khoản Cloudinary cho việc lưu trữ ảnh vợt và VNPay trong file `.env`)*
+> 💡 **Tip:** Hãy chắc chắn bạn đã cấu hình thông tin kết nối `DB_DATABASE`, `CLOUDINARY_URL` và config `VNPAY` bên trong file `.env`.
 
-### 2. Cài đặt Frontend
+### 2. Khởi chạy Frontend (Storefront)
 ```bash
+# Di chuyển vào thư mục frontend
 cd nvdn-frontend
+
+# Cài đặt các gói npm
 npm install
+
+# Khởi chạy dev server với Turbopack
 npm run dev
 ```
-Truy cập `http://localhost:3000` để trải nghiệm cửa hàng.
+> 🌐 Mở trình duyệt tại: [http://localhost:3000](http://localhost:3000)
 
 ---
 
-## 📸 Ảnh chụp màn hình (Screenshots)
-*(Hãy bổ sung hình ảnh giao diện cửa hàng và trang quản trị tại đây)*
+## 📸 Thư viện Hình ảnh
+*(Bạn hãy cập nhật những hình ảnh đẹp nhất của dự án vào đây nhé)*
 
+<details open>
+<summary><b>1. Giao diện Cửa hàng (Storefront)</b></summary>
+<br>
+<p align="center">
+  <img src="https://via.placeholder.com/900x450/1a1a1a/ffffff?text=Landing+Page+Tuyệt+Đẹp" width="80%">
+</p>
+</details>
+
+<details>
+<summary><b>2. Bộ lọc Sản phẩm & Biến thể (Trọng lượng, Cán vợt)</b></summary>
+<br>
+<p align="center">
+  <img src="https://via.placeholder.com/900x450/1a1a1a/ffffff?text=Product+Details+&+Variants" width="80%">
+</p>
+</details>
+
+<details>
+<summary><b>3. Giỏ hàng & Cổng thanh toán VNPay</b></summary>
+<br>
+<p align="center">
+  <img src="https://via.placeholder.com/900x450/1a1a1a/ffffff?text=Checkout+&+VNPay" width="80%">
+</p>
+</details>
+
+<details>
+<summary><b>4. Trang quản trị CMS (Admin Dashboard)</b></summary>
+<br>
+<p align="center">
+  <img src="https://via.placeholder.com/900x450/1a1a1a/ffffff?text=Admin+Dashboard+&+Charts" width="80%">
+</p>
+</details>
+
+<br>
 <div align="center">
-  <img src="https://via.placeholder.com/800x400.png?text=Trang+Chu+Shop+Vot" alt="Trang chủ Cửa hàng" width="48%">
-  <img src="https://via.placeholder.com/800x400.png?text=Chi+Tiet+Vot+Cau+Long" alt="Chi tiết sản phẩm" width="48%">
-  <img src="https://via.placeholder.com/800x400.png?text=Trang+Quan+Tri+Dashboard" alt="Quản trị Admin" width="48%">
-  <img src="https://via.placeholder.com/800x400.png?text=Tich+Hop+VNPay" alt="Thanh toán VNPAY" width="48%">
+  <i>Được xây dựng với 💖 và nỗ lực tuyệt vời!</i><br>
+  <b>Nếu bạn thấy dự án này chất lượng, hãy tặng repo này 1 ⭐ nhé!</b>
 </div>
-
----
-
-## 👨‍💻 Tác giả
-- **[Tên của bạn]** - *Sinh viên Thực tập Tốt nghiệp*
-
-Nếu bạn thấy dự án này thú vị, hãy cho mình một ⭐ để ủng hộ nhé!
